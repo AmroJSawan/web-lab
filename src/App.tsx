@@ -13,11 +13,13 @@ import {
   loadCalibration,
   pickScreenColor,
   resolveBrowserFill,
+  sampleToolbarColor,
   saveCalibration,
   supportsEyeDropper,
+  supportsScreenSample,
   type Calibration,
 } from '@/lib/browser-canvas'
-import { Pipette } from 'lucide-react'
+import { Pipette, Wand2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 const stack = [
@@ -38,13 +40,15 @@ export default function App() {
     [theme, calibration],
   )
 
-  const calibrate = async () => {
-    const color = await pickScreenColor()
+  const applyFill = (color: string | null) => {
     if (!color) return
     const next = { ...calibration, [theme]: color }
     setCalibration(next)
     saveCalibration(next)
   }
+
+  const calibrate = async () => applyFill(await pickScreenColor())
+  const autoMatch = async () => applyFill(await sampleToolbarColor())
 
   const resetCalibration = () => {
     const next = { ...calibration }
@@ -103,11 +107,18 @@ export default function App() {
                 <Button asChild variant="outline" className="bg-transparent">
                   <a href="https://ui.shadcn.com">shadcn/ui docs</a>
                 </Button>
-                {supportsEyeDropper() && (
+                {(supportsEyeDropper() || supportsScreenSample()) && (
                   <span className="ml-auto flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={calibrate}>
-                      <Pipette /> Match toolbar
-                    </Button>
+                    {supportsScreenSample() && (
+                      <Button variant="ghost" size="sm" onClick={autoMatch}>
+                        <Wand2 /> Auto match
+                      </Button>
+                    )}
+                    {supportsEyeDropper() && (
+                      <Button variant="ghost" size="sm" onClick={calibrate}>
+                        <Pipette /> Match toolbar
+                      </Button>
+                    )}
                     {calibration[theme] && (
                       <Button
                         variant="ghost"

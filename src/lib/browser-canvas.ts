@@ -72,6 +72,74 @@ function desktopBrowser(): string | null {
   return null // Safari and everything else
 }
 
+export function supportsScreenSample(): boolean {
+  return typeof navigator.mediaDevices?.getDisplayMedia === 'function'
+}
+
+/**
+ * Automated toolbar sampling: capture one frame of the screen, locate the
+ * browser-chrome strip directly above this page's viewport from the window's
+ * screen position, and return the dominant color of that strip. The capture
+ * stream is stopped immediately after the single frame. Resolves to a hex
+ * color, or null if the user declines, the window has no visible chrome, or
+ * the captured surface doesn't include it.
+ */
+export async function sampleToolbarColor(): Promise<string | null> {
+  if (!supportsScreenSample()) return null
+  let stream: MediaStream | null = null
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: 'monitor' },
+      audio: false,
+    })
+    const video = document.createElement('video')
+    video.srcObject = stream
+    video.muted = true
+    await video.play()
+    await new Promise((resolve) => setTimeout(resolve, 200)) // let a real frame arrive
+
+    const chromeHeight = window.outerHeight - window.innerHeight
+    if (chromeHeight <= 0 || video.videoWidth === 0) return null
+
+    const scale = video.videoWidth / screen.width
+    const screenOrigin = screen as { availLeft?: number; availTop?: number }
+    // A 3px-tall strip at the very bottom of the chrome, just above the viewport.
+    const y = Math.round((window.screenY - (screenOrigin.availTop ?? 0) + chromeHeight - 6) * scale)
+    const x0 = Math.round((window.screenX - (screenOrigin.availLeft ?? 0) + 8) * scale)
+    const width = Math.round((window.outerWidth - 16) * scale)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return null
+    ctx.drawImage(video, 0, 0)
+    const strip = ctx.getImageData(x0, Math.max(0, y - 1), Math.max(1, width), 3).data
+
+    // The most frequent color wins: chrome background dominates over icons,
+    // text, and bookmark chips crossing the strip.
+    const counts = new Map<number, number>()
+    for (let i = 0; i < strip.length; i += 4) {
+      const key = (strip[i] << 16) | (strip[i + 1] << 8) | strip[i + 2]
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    let bestKey = -1
+    let bestCount = 0
+    for (const [key, count] of counts) {
+      if (count > bestCount) {
+        bestKey = key
+        bestCount = count
+      }
+    }
+    if (bestKey < 0) return null
+    return `#${bestKey.toString(16).padStart(6, '0')}`
+  } catch {
+    return null
+  } finally {
+    stream?.getTracks().forEach((track) => track.stop())
+  }
+}
+
 /**
  * The browser's own native background color for a given scheme, resolved from
  * the CSS system color `Canvas` — the exact color the browser paints behind
