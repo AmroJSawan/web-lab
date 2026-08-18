@@ -9,8 +9,16 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { useSystemTheme } from '@/hooks/use-system-theme'
-import { resolveBrowserFill } from '@/lib/browser-canvas'
-import { useEffect, useMemo } from 'react'
+import {
+  loadCalibration,
+  pickScreenColor,
+  resolveBrowserFill,
+  saveCalibration,
+  supportsEyeDropper,
+  type Calibration,
+} from '@/lib/browser-canvas'
+import { Pipette } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 const stack = [
   { name: 'Vite 8', role: 'Build' },
@@ -24,7 +32,26 @@ const stack = [
 
 export default function App() {
   const theme = useSystemTheme()
-  const browserFill = useMemo(() => resolveBrowserFill(theme), [theme])
+  const [calibration, setCalibration] = useState<Calibration>(loadCalibration)
+  const browserFill = useMemo(
+    () => calibration[theme] ?? resolveBrowserFill(theme),
+    [theme, calibration],
+  )
+
+  const calibrate = async () => {
+    const color = await pickScreenColor()
+    if (!color) return
+    const next = { ...calibration, [theme]: color }
+    setCalibration(next)
+    saveCalibration(next)
+  }
+
+  const resetCalibration = () => {
+    const next = { ...calibration }
+    delete next[theme]
+    setCalibration(next)
+    saveCalibration(next)
+  }
 
   useEffect(() => {
     // Paint the page with the browser chrome's color, and tint chrome that
@@ -69,13 +96,30 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Button asChild>
                   <a href="https://github.com/AmroJSawan/web-lab">Repository</a>
                 </Button>
                 <Button asChild variant="outline" className="bg-transparent">
                   <a href="https://ui.shadcn.com">shadcn/ui docs</a>
                 </Button>
+                {supportsEyeDropper() && (
+                  <span className="ml-auto flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={calibrate}>
+                      <Pipette /> Match toolbar
+                    </Button>
+                    {calibration[theme] && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground"
+                        onClick={resetCalibration}
+                      >
+                        Reset
+                      </Button>
+                    )}
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>

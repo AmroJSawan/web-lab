@@ -1,5 +1,50 @@
 type Scheme = 'light' | 'dark'
 
+interface EyeDropperResult {
+  sRGBHex: string
+}
+
+declare global {
+  interface Window {
+    EyeDropper?: new () => { open(): Promise<EyeDropperResult> }
+  }
+}
+
+const CALIBRATION_KEY = 'browser-fill-calibration'
+
+export type Calibration = Partial<Record<Scheme, string>>
+
+export function loadCalibration(): Calibration {
+  try {
+    return JSON.parse(localStorage.getItem(CALIBRATION_KEY) ?? '{}') as Calibration
+  } catch {
+    return {}
+  }
+}
+
+export function saveCalibration(calibration: Calibration): void {
+  localStorage.setItem(CALIBRATION_KEY, JSON.stringify(calibration))
+}
+
+export function supportsEyeDropper(): boolean {
+  return typeof window.EyeDropper === 'function'
+}
+
+/**
+ * Let the user pick any pixel on screen — browser toolbar included — via the
+ * EyeDropper API. Resolves to the picked hex, or null if unsupported or the
+ * user cancels.
+ */
+export async function pickScreenColor(): Promise<string | null> {
+  if (!window.EyeDropper) return null
+  try {
+    const result = await new window.EyeDropper().open()
+    return result.sRGBHex
+  } catch {
+    return null
+  }
+}
+
 /**
  * Desktop browsers paint their toolbar from their own UI theme and expose no
  * API for pages to read that color (and desktop Chrome/Edge/Firefox ignore
