@@ -33,6 +33,17 @@ npm run preview   # serve the production build locally
 npx shadcn@latest add <component>
 ```
 
+## Failed experiments
+
+**Browser-chrome color matching (2026-08-19, removed).** Goal: make the page background automatically match the exact color of the browser toolbar it sits inside, with no interaction and no permissions. Outcome: **failed** — not achievable on the web platform. Findings, for the record:
+
+- No API exposes browser-UI pixels to a page. The legacy CSS system colors (`ActiveCaption`, `Window`, `Menu`, …) that once leaked OS chrome colors are standardized to fixed aliases of `Canvas` in Chromium as anti-fingerprinting hardening; `AccentColor` is scoped to installed PWAs for the same reason.
+- Every pixel-reading path is gated: EyeDropper needs a user click per pick, `getDisplayMedia` needs a share approval per session. Both worked but require interaction, which failed the "automatic" requirement.
+- Heuristic per-browser toolbar palettes work for default themes but silently break on custom browser themes, and per-platform values drift with browser versions.
+- The reverse channel (`theme-color`, honored by Safari/mobile) is the only exact mechanism, and it only works where the browser tints itself from the page.
+
+Conclusion: pages cannot know their surrounding chrome color by design. Use the standard token-based light/dark theme and let browsers that tint from the page do so.
+
 ## Deploy
 
 Push to `main`. The GitHub Actions workflow in `.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages. `base` is set to `/web-lab/` in `vite.config.ts`.

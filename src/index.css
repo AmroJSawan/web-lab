@@ -124,9 +124,7 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply text-foreground;
-    /* Match the browser's own background exactly */
-    background-color: Canvas;
+    @apply bg-background text-foreground;
     }
   html {
     @apply font-sans;
