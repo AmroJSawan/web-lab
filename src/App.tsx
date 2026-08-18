@@ -35,10 +35,13 @@ const stack = [
 export default function App() {
   const theme = useSystemTheme()
   const [calibration, setCalibration] = useState<Calibration>(loadCalibration)
-  const browserFill = useMemo(
-    () => calibration[theme] ?? resolveBrowserFill(theme),
-    [theme, calibration],
-  )
+  const browserFill = useMemo(() => {
+    // ?fill=%23282828 (or ?fill-dark= / ?fill-light=) pins an exact color via
+    // the URL — no interaction or storage needed on the visiting device.
+    const params = new URLSearchParams(window.location.search)
+    const urlFill = params.get(`fill-${theme}`) ?? params.get('fill')
+    return urlFill ?? calibration[theme] ?? resolveBrowserFill(theme)
+  }, [theme, calibration])
 
   const applyFill = (color: string | null) => {
     if (!color) return
