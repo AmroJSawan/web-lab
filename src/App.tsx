@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { useSystemTheme } from '@/hooks/use-system-theme'
-import { resolveBrowserCanvas } from '@/lib/browser-canvas'
+import { resolveBrowserFill } from '@/lib/browser-canvas'
 import { useEffect, useMemo } from 'react'
 
 const stack = [
@@ -24,15 +24,17 @@ const stack = [
 
 export default function App() {
   const theme = useSystemTheme()
-  const browserCanvas = useMemo(() => resolveBrowserCanvas(theme), [theme])
+  const browserFill = useMemo(() => resolveBrowserFill(theme), [theme])
 
   useEffect(() => {
-    // Tint the browser chrome with the exact same color the page rests on.
+    // Paint the page with the browser chrome's color, and tint chrome that
+    // follows theme-color with the same value.
+    document.body.style.backgroundColor = browserFill
     const meta = document.querySelector<HTMLMetaElement>(
       `meta[name="theme-color"][media="(prefers-color-scheme: ${theme})"]`,
     )
-    meta?.setAttribute('content', browserCanvas)
-  }, [theme, browserCanvas])
+    meta?.setAttribute('content', browserFill)
+  }, [theme, browserFill])
 
   return (
     <div className="min-h-svh text-foreground">
