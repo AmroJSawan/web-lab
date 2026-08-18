@@ -1,4 +1,3 @@
-import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { motion } from 'motion/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,11 +9,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { useSystemTheme } from '@/hooks/use-system-theme'
-import { resolveBrowserCanvas, toShaderColor } from '@/lib/browser-canvas'
-
-const ShaderBackground = lazy(() =>
-  import('@/components/shader-background').then((m) => ({ default: m.ShaderBackground })),
-)
+import { resolveBrowserCanvas } from '@/lib/browser-canvas'
+import { useEffect, useMemo } from 'react'
 
 const stack = [
   { name: 'Vite 8', role: 'Build' },
@@ -40,10 +36,6 @@ export default function App() {
 
   return (
     <div className="min-h-svh text-foreground">
-      <Suspense fallback={null}>
-        <ShaderBackground dark={theme === 'dark'} base={toShaderColor(browserCanvas)} />
-      </Suspense>
-
       <main className="mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-8 px-6 py-16">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -58,10 +50,9 @@ export default function App() {
               </Badge>
               <CardTitle className="text-3xl tracking-tight">web-lab</CardTitle>
               <CardDescription>
-                A minimal, fast base for modern interfaces: real GLSL shaders in the
-                background, glass surfaces in the foreground, and a full component
-                system ready underneath. Colors follow your browser's light or dark
-                scheme, live.
+                A minimal, fast base for modern interfaces. The page rests on your
+                browser's own background color and follows its light or dark scheme,
+                live.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-6">
