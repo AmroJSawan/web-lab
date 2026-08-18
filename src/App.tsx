@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { useSystemTheme } from '@/hooks/use-system-theme'
 
 const ShaderBackground = lazy(() =>
   import('@/components/shader-background').then((m) => ({ default: m.ShaderBackground })),
@@ -25,10 +26,12 @@ const stack = [
 ]
 
 export default function App() {
+  const theme = useSystemTheme()
+
   return (
-    <div className="dark min-h-svh text-foreground">
-      <Suspense fallback={<div className="fixed inset-0 -z-10 bg-[#0a0b17]" />}>
-        <ShaderBackground />
+    <div className="min-h-svh text-foreground">
+      <Suspense fallback={<div className="fixed inset-0 -z-10 bg-background" />}>
+        <ShaderBackground dark={theme === 'dark'} />
       </Suspense>
 
       <main className="mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-8 px-6 py-16">
@@ -38,16 +41,17 @@ export default function App() {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="w-full"
         >
-          <Card className="border-white/10 bg-white/5 shadow-2xl shadow-black/40 backdrop-blur-2xl">
+          <Card className="border-foreground/10 bg-background/40 shadow-2xl shadow-black/10 backdrop-blur-2xl dark:bg-white/5 dark:shadow-black/40">
             <CardHeader>
-              <Badge variant="secondary" className="mb-2 w-fit bg-white/10 text-white/80">
-                Live on GitHub Pages
+              <Badge variant="secondary" className="mb-2 w-fit bg-foreground/10">
+                Follows your browser theme
               </Badge>
-              <CardTitle className="text-3xl tracking-tight text-white">web-lab</CardTitle>
-              <CardDescription className="text-white/60">
+              <CardTitle className="text-3xl tracking-tight">web-lab</CardTitle>
+              <CardDescription>
                 A minimal, fast base for modern interfaces: real GLSL shaders in the
                 background, glass surfaces in the foreground, and a full component
-                system ready underneath.
+                system ready underneath. Colors follow your browser's light or dark
+                scheme, live.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-6">
@@ -55,22 +59,18 @@ export default function App() {
                 {stack.map((item) => (
                   <li
                     key={item.name}
-                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                    className="rounded-lg border border-foreground/10 bg-background/30 px-3 py-2 dark:bg-white/5"
                   >
-                    <p className="text-sm font-medium text-white">{item.name}</p>
-                    <p className="text-xs text-white/50">{item.role}</p>
+                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{item.role}</p>
                   </li>
                 ))}
               </ul>
               <div className="flex gap-3">
-                <Button asChild className="bg-white text-black hover:bg-white/85">
+                <Button asChild>
                   <a href="https://github.com/AmroJSawan/web-lab">Repository</a>
                 </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                >
+                <Button asChild variant="outline" className="bg-transparent">
                   <a href="https://ui.shadcn.com">shadcn/ui docs</a>
                 </Button>
               </div>

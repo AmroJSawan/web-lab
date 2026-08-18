@@ -15,6 +15,7 @@ const fragmentShader = /* glsl */ `
   varying vec2 vUv;
   uniform float uTime;
   uniform vec2 uResolution;
+  uniform float uDark; // 1.0 = dark scheme, 0.0 = light scheme
 
   // Soft flowing gradient field
   void main() {
@@ -28,13 +29,14 @@ const fragmentShader = /* glsl */ `
       sin(p.y * 4.0 - t * 3.0) * 0.25 +
       sin((p.x + p.y) * 5.0 + t) * 0.15;
 
-    vec3 deep = vec3(0.03, 0.04, 0.09);
-    vec3 indigo = vec3(0.16, 0.14, 0.42);
-    vec3 cyan = vec3(0.10, 0.42, 0.52);
+    // Palette per color scheme
+    vec3 base = mix(vec3(0.93, 0.94, 0.98), vec3(0.03, 0.04, 0.09), uDark);
+    vec3 primary = mix(vec3(0.72, 0.74, 0.96), vec3(0.16, 0.14, 0.42), uDark);
+    vec3 accent = mix(vec3(0.62, 0.84, 0.92), vec3(0.10, 0.42, 0.52), uDark);
 
     float d = length(p - vec2(sin(t) * 0.4, cos(t * 0.7) * 0.3));
-    vec3 color = mix(indigo, deep, smoothstep(0.0, 1.1, d + wave));
-    color = mix(color, cyan, smoothstep(0.5, 0.0, length(p + vec2(cos(t * 0.9) * 0.5, sin(t * 0.6) * 0.35))) * 0.5);
+    vec3 color = mix(primary, base, smoothstep(0.0, 1.1, d + wave));
+    color = mix(color, accent, smoothstep(0.5, 0.0, length(p + vec2(cos(t * 0.9) * 0.5, sin(t * 0.6) * 0.35))) * 0.5);
 
     // subtle grain to avoid banding
     float grain = fract(sin(dot(uv * uResolution, vec2(12.9898, 78.233))) * 43758.5453) * 0.03;
@@ -42,13 +44,16 @@ const fragmentShader = /* glsl */ `
   }
 `
 
-function GradientPlane() {
+function GradientPlane({ dark }: { dark: boolean }) {
   const material = useRef<THREE.ShaderMaterial>(null)
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!material.current) return
-    material.current.uniforms.uTime.value = state.clock.elapsedTime
-    material.current.uniforms.uResolution.value.set(state.size.width, state.size.height)
+    const uniforms = material.current.uniforms
+    uniforms.uTime.value = state.clock.elapsedTime
+    uniforms.uResolution.value.set(state.size.width, state.size.height)
+    // Ease between palettes instead of hard-switching
+    uniforms.uDark.value = THREE.MathUtils.damp(uniforms.uDark.value, dark ? 1 : 0, 6, delta)
   })
 
   return (
@@ -61,17 +66,18 @@ function GradientPlane() {
         uniforms={{
           uTime: { value: 0 },
           uResolution: { value: new THREE.Vector2(1, 1) },
+          uDark: { value: dark ? 1 : 0 },
         }}
       />
     </mesh>
   )
 }
 
-export function ShaderBackground() {
+export function ShaderBackground({ dark }: { dark: boolean }) {
   return (
     <div className="fixed inset-0 -z-10">
       <Canvas dpr={[1, 2]} gl={{ antialias: false, powerPreference: 'high-performance' }}>
-        <GradientPlane />
+        <GradientPlane dark={dark} />
       </Canvas>
     </div>
   )

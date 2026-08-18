@@ -1,10 +1,19 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef1fa" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0b17" />
     <title>web-lab</title>
+    <script>
+      // Apply the browser's color scheme before first paint, and follow live changes.
+      const media = matchMedia('(prefers-color-scheme: dark)')
+      const apply = () => document.documentElement.classList.toggle('dark', media.matches)
+      apply()
+      media.addEventListener('change', apply)
+    </script>
   </head>
   <body>
     <div id="root"></div>
