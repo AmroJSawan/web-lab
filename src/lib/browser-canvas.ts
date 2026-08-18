@@ -56,8 +56,11 @@ export async function pickScreenColor(): Promise<string | null> {
  * from the page itself (theme-color / sampled background), so the native
  * Canvas color plus a matching theme-color is already exact there.
  */
+const isMac = navigator.userAgent.includes('Macintosh')
+
 const DESKTOP_TOOLBAR: Record<string, Record<Scheme, string>> = {
-  chrome: { light: '#ffffff', dark: '#282828' },
+  // macOS Chrome's dark toolbar measured at #383b42 (GM3); other platforms #282828.
+  chrome: { light: '#ffffff', dark: isMac ? '#383b42' : '#282828' },
   edge: { light: '#f7f7f7', dark: '#2b2b2b' },
   firefox: { light: '#f9f9fb', dark: '#2b2a33' },
 }
