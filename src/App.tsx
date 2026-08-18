@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { motion } from 'motion/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { useSystemTheme } from '@/hooks/use-system-theme'
+import { resolveBrowserCanvas, toShaderColor } from '@/lib/browser-canvas'
 
 const ShaderBackground = lazy(() =>
   import('@/components/shader-background').then((m) => ({ default: m.ShaderBackground })),
@@ -27,11 +28,20 @@ const stack = [
 
 export default function App() {
   const theme = useSystemTheme()
+  const browserCanvas = useMemo(() => resolveBrowserCanvas(theme), [theme])
+
+  useEffect(() => {
+    // Tint the browser chrome with the exact same color the page rests on.
+    const meta = document.querySelector<HTMLMetaElement>(
+      `meta[name="theme-color"][media="(prefers-color-scheme: ${theme})"]`,
+    )
+    meta?.setAttribute('content', browserCanvas)
+  }, [theme, browserCanvas])
 
   return (
     <div className="min-h-svh text-foreground">
-      <Suspense fallback={<div className="fixed inset-0 -z-10 bg-background" />}>
-        <ShaderBackground dark={theme === 'dark'} />
+      <Suspense fallback={null}>
+        <ShaderBackground dark={theme === 'dark'} base={toShaderColor(browserCanvas)} />
       </Suspense>
 
       <main className="mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-8 px-6 py-16">
