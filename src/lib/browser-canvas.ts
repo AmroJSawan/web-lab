@@ -160,6 +160,10 @@ function resolveCanvas(scheme: Scheme): string {
  * browser and color scheme.
  */
 export function resolveBrowserFill(scheme: Scheme): string {
+  // In forced-colors (high-contrast) mode the system colors are the user's
+  // real OS palette, so Canvas is the genuinely correct surface — the
+  // per-browser defaults would fight the OS theme.
+  if (matchMedia('(forced-colors: active)').matches) return resolveCanvas(scheme)
   const browser = desktopBrowser()
   if (browser && DESKTOP_TOOLBAR[browser]) return DESKTOP_TOOLBAR[browser][scheme]
   return resolveCanvas(scheme)
