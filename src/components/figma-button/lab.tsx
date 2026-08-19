@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, FigmaButton, type ButtonSettings } from './index'
+import { MaterialButton } from './material-button'
 import { setSharedSettings, useSharedSettings } from './settings-store'
 
 const LAYER_TOGGLES: Array<{ key: keyof ButtonSettings; label: string }> = [
@@ -42,6 +43,13 @@ export function FigmaButtonLab() {
     <div className="flex w-full flex-col items-center gap-6">
       <div className="w-full max-w-[820px] px-2">
         <FigmaButton fit settings={settings} />
+      </div>
+
+      {/* Same material on the real shadcn button geometry, driven by the same
+          controls — the small-scale QA reference next to the full-size one. */}
+      <div className="flex items-center gap-3">
+        <MaterialButton>shadcn/ui docs</MaterialButton>
+        <span className="text-xs text-muted-foreground">shadcn button, same material + controls</span>
       </div>
 
       <div className="grid w-full max-w-3xl gap-6 rounded-xl border bg-card p-5 sm:grid-cols-2">
