@@ -24,15 +24,29 @@ export const fragmentShader = /* glsl */ `
   uniform vec3 uPageBg;      // page background behind the frame
   uniform float uPageBgAlpha;
 
-  // --- calibration uniforms (Figma-unpublished internals) ---
-  uniform float uWaveAmp;    // px displacement at Strength 61
-  uniform float uWaveLen;    // px wavelength from Transform R=12
-  uniform float uWaveAngle;  // radians, from A=472deg
-  uniform vec2  uWaveOrigin; // fraction of layer size, from Transform X/Y = 48%/50%
-  uniform float uFrostBlur;  // px blur radius from Frost=100
-  uniform float uFrostGrain; // grain amount from Frost=100
+  // --- Pattern Refraction uniforms (exact port of Figma's shader via
+  //     fand/vfx-js pattern-refraction.ts, "Ported from Figma") ---
+  uniform float uPRStrength;   // Figma Strength / 100
+  uniform float uPRSmooth;     // Figma Smoothness / 100
+  uniform float uPRFrost;      // Figma Frost / 100
+  uniform float uPRDispersion; // Figma Dispersion / 100
+  uniform float uPRStripWidth; // Figma Transform R / 100
+  uniform float uPRAngle;      // Figma Transform A, degrees (unclamped)
+  uniform vec2  uPRCenter;     // Figma Transform X/Y as fractions
+
+  // --- remaining calibration uniforms (engine internals) ---
   uniform float uBlurSigma;  // gaussian sigma for Figma LAYER_BLUR 97.19
   uniform float uGlassScale; // px offset at refraction=1 with depth profile=1
+  uniform float uSpecGain;   // specular rim gain multiplier
+
+  // --- per-layer QA toggles (1 = visible) ---
+  uniform float uShowA;          // "FX shader 02" wave layer
+  uniform float uShowWave;       // the Pattern Refraction effect itself (off = plain fill)
+  uniform float uShowB;          // "Solid" blurred pill
+  uniform float uShowGlass;      // GLASS refraction/specular
+  uniform float uShowGlassFill;  // Glass layer's 15% gradient fill
+  uniform float uShowInnerShadow;
+  uniform float uShowStroke;
 
   // ============ SDF helpers ============
   float sdRoundRect(vec2 p, vec2 center, vec2 halfSize, float r) {
@@ -49,6 +63,31 @@ export const fragmentShader = /* glsl */ `
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  #define TAU 6.28318530718
+
+  mat2 rot2d(float a) {
+    float c = cos(a);
+    float s = sin(a);
+    return mat2(c, s, -s, c);
+  }
+
+  float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
+  float valueNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x),
+      mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x),
+      u.y
+    );
   }
 
   // ============ Layer A: "FX shader 02" rectangle ============
@@ -69,39 +108,57 @@ export const fragmentShader = /* glsl */ `
     return vec4(gradA(p), alpha);
   }
 
-  // Pattern Refraction (Waves): displace sampling of layer A's own raster.
-  // Strength 61, Smoothness 0, Frost 100, Dispersion 0, Edge wrap Zero,
-  // Transform X 48% Y 50% R 12 A 472deg (== 112deg).
-  vec2 waveDisplace(vec2 p) {
-    vec2 origin = A_POS + uWaveOrigin * A_SIZE;
-    vec2 q = p - origin;
-    vec2 dir = vec2(cos(uWaveAngle), sin(uWaveAngle));
-    vec2 perp = vec2(-dir.y, dir.x);
-    float along = dot(q, dir);
-    float across = dot(q, perp);
-    // Crossed sines make the classic figma wave sheet: primary ridge along
-    // the pattern axis, secondary modulation across it.
-    float phase = along / uWaveLen;
-    float wobble = sin(across / (uWaveLen * 1.9) + phase * 0.7);
-    float w1 = sin(phase * 6.28318 + wobble * 1.2);
-    float w2 = cos(phase * 6.28318 * 0.5 - wobble * 1.7);
-    return perp * (w1 * uWaveAmp) + dir * (w2 * uWaveAmp * 0.55);
+  // Pattern Refraction (Waves) — exact port of Figma's shader math
+  // (fand/vfx-js pattern-refraction.ts, "Ported from Figma"). Works in the
+  // layer's own normalized UV space. Node values: Strength 61, Smoothness 0,
+  // Frost 100, Dispersion 0, Edge wrap Zero, Transform X48% Y50% R12 A472deg.
+  vec2 patternSampleUV(vec2 uv, float stGrid, float stDisp) {
+    vec2 q = rot2d(-radians(uPRAngle)) * (uv - uPRCenter);
+    float count = 1.0 / uPRStripWidth;
+
+    // Waves: bend the lens grid along y. Frequency scales with 1/stripWidth.
+    float gx = q.x;
+    float bendPhase = (q.y + 0.5) * TAU / (5.0 * uPRStripWidth);
+    gx += sin(bendPhase) * stGrid * 0.5 * uPRStripWidth;
+
+    float n = fract(gx * count) * 2.0 - 1.0;
+    float sharp = sign(n) * pow(abs(n), 8.0);
+    float soft = sin(n * TAU * 0.5) * n * n; // waves variant keeps bend at boundary
+    float shape = mix(sharp, soft, uPRSmooth);
+    float disp = 0.3 * uPRStripWidth * stDisp * shape;
+    q.x += disp;
+    // Refraction follows the bent grid: y shift = x shift times grid slope.
+    q.y += disp * cos(bendPhase) * stGrid * 0.5 * TAU / 5.0;
+    return rot2d(radians(uPRAngle)) * q + uPRCenter;
+  }
+
+  vec4 rasterA_uv(vec2 uv) {
+    // Edge wrap: Zero — transparent outside the layer bounds
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return vec4(0.0);
+    return rasterA(A_POS + uv * A_SIZE);
   }
 
   vec4 layerA(vec2 p) {
-    vec2 pd = p + waveDisplace(p);
-    // Frost 100: blur + grain haze over the refracted raster
-    vec4 acc = vec4(0.0);
-    const int TAPS = 8;
-    for (int i = 0; i < TAPS; i++) {
-      float a = 6.28318 * (float(i) + 0.5) / float(TAPS);
-      float r = uFrostBlur * (0.4 + 0.6 * hash(p + float(i)));
-      acc += rasterA(pd + vec2(cos(a), sin(a)) * r);
+    if (uShowA < 0.5) return vec4(0.0);
+    if (uShowWave < 0.5) return rasterA(p);
+    vec2 uv = (p - A_POS) / A_SIZE;
+    vec2 uvR = patternSampleUV(uv, uPRStrength, uPRStrength * (1.0 + uPRDispersion));
+    vec2 uvG = patternSampleUV(uv, uPRStrength, uPRStrength);
+    vec2 uvB = patternSampleUV(uv, uPRStrength, uPRStrength * (1.0 - uPRDispersion));
+
+    if (uPRFrost > 0.0) {
+      // Frost: jitter the sample with value noise for a frosted-glass blur.
+      vec2 j = (vec2(
+        valueNoise(uv * 1024.0),
+        valueNoise(uv * 1024.0 + 19.0)
+      ) - 0.5) * uPRFrost * 0.05;
+      uvR += j;
+      uvG += j;
+      uvB += j;
     }
-    vec4 c = acc / float(TAPS);
-    float grain = (hash(p * 1.7) - 0.5) * uFrostGrain;
-    c.rgb = clamp(c.rgb + grain, 0.0, 1.0);
-    return c;
+
+    vec4 cg = rasterA_uv(uvG);
+    return vec4(rasterA_uv(uvR).r, cg.g, rasterA_uv(uvB).b, cg.a);
   }
 
   // ============ Layer B: "Solid" pill with LAYER_BLUR 97.19 ============
@@ -117,6 +174,7 @@ export const fragmentShader = /* glsl */ `
   }
 
   vec4 layerB(vec2 p) {
+    if (uShowB < 0.5) return vec4(0.0);
     float d = sdRoundRect(p, B_POS + B_SIZE * 0.5, B_SIZE * 0.5, B_SIZE.y * 0.5);
     float alpha = 1.0 - blurredStep(d, uBlurSigma);
     return vec4(gradB(p), alpha);
@@ -149,7 +207,21 @@ export const fragmentShader = /* glsl */ `
     vec2 center = uSize * 0.5;
     vec2 halfSize = uSize * 0.5;
     float d = sdRoundRect(p, center, halfSize, GLASS_R);
-    if (d > 0.0) return backdrop(p);
+    if (d > 0.0 || uShowGlass < 0.5) {
+      vec4 c0 = backdrop(p);
+      if (d <= 0.0) {
+        if (uShowGlassFill > 0.5) {
+          float gt0 = clamp(p.y / uSize.y, 0.0, 1.0);
+          c0 = over(vec4(mix(vec3(1.0), vec3(0.6), gt0), 0.15), c0);
+        }
+        if (uShowInnerShadow > 0.5) {
+          float ds0 = sdRoundRect(p - vec2(0.0, 4.612), center, halfSize, GLASS_R);
+          float sh0 = 1.0 - blurredStep(-ds0, 74.016 * 0.5);
+          c0.rgb = mix(c0.rgb, vec3(1.0), 0.25 * sh0 * c0.a);
+        }
+      }
+      return c0;
+    }
 
     // Edge profile: dome over the band [-depth, 0] measured inward. A softer
     // falloff than the raw circle derivative avoids the "picture frame" look.
@@ -194,18 +266,22 @@ export const fragmentShader = /* glsl */ `
     float splay = mix(2.6, 0.9, 0.4);                  // splay widens angular falloff
     float rim = pow(clamp(abs(facing), 0.0, 1.0), splay);
     float rimBand = pow(1.0 - t, 3.0);                 // strongest at the very edge
-    float spec = 0.8 * 0.45 * rim * rimBand;
+    float spec = 0.8 * uSpecGain * rim * rimBand;
     c.rgb += vec3(spec);
 
     // Fill: vertical white -> #999 gradient, 15% opacity
-    float gt = clamp(p.y / uSize.y, 0.0, 1.0);
-    vec3 fillCol = mix(vec3(1.0), vec3(0.6), gt);
-    c = over(vec4(fillCol, 0.15), c);
+    if (uShowGlassFill > 0.5) {
+      float gt = clamp(p.y / uSize.y, 0.0, 1.0);
+      vec3 fillCol = mix(vec3(1.0), vec3(0.6), gt);
+      c = over(vec4(fillCol, 0.15), c);
+    }
 
     // Inner shadow: white 25%, offset (0, 4.612), blur 74.016 (sigma ~ b/2)
-    float ds = sdRoundRect(p - vec2(0.0, 4.612), center, halfSize, GLASS_R);
-    float sh = 1.0 - blurredStep(-ds, 74.016 * 0.5);   // glow pulling in from edges
-    c.rgb = mix(c.rgb, vec3(1.0), 0.25 * sh * c.a);
+    if (uShowInnerShadow > 0.5) {
+      float ds = sdRoundRect(p - vec2(0.0, 4.612), center, halfSize, GLASS_R);
+      float sh = 1.0 - blurredStep(-ds, 74.016 * 0.5); // glow pulling in from edges
+      c.rgb = mix(c.rgb, vec3(1.0), 0.25 * sh * c.a);
+    }
 
     return c;
   }
@@ -237,9 +313,11 @@ export const fragmentShader = /* glsl */ `
     c.a *= clipA;
 
     // Centered stroke straddles the frame edge
-    float band = abs(dFrame) - STROKE_W * 0.5;
-    float strokeA = 1.0 - smoothstep(-0.75, 0.75, band);
-    c = over(vec4(strokeGrad(p), strokeA), c);
+    if (uShowStroke > 0.5) {
+      float band = abs(dFrame) - STROKE_W * 0.5;
+      float strokeA = 1.0 - smoothstep(-0.75, 0.75, band);
+      c = over(vec4(strokeGrad(p), strokeA), c);
+    }
 
     gl_FragColor = vec4(c.rgb * c.a, c.a);  // premultiplied
   }

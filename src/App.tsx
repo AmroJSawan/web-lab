@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 const FigmaButton = lazy(() =>
   import('@/components/figma-button').then((m) => ({ default: m.FigmaButton })),
 )
+const FigmaButtonLab = lazy(() =>
+  import('@/components/figma-button/lab').then((m) => ({ default: m.FigmaButtonLab })),
+)
 import {
   Card,
   CardContent,
@@ -31,7 +34,7 @@ export default function App() {
           Experiment 01: Figma shader parity — wave refraction + glass
         </p>
         <Suspense fallback={<div style={{ width: 782, height: 255 }} />}>
-          <FigmaButton />
+          <FigmaButtonLab />
         </Suspense>
       </section>
 
@@ -59,7 +62,10 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3">
+                <Suspense fallback={<div style={{ width: 141, height: 46 }} />}>
+                  <FigmaButton scale={0.18} />
+                </Suspense>
                 <Button asChild>
                   <a href="https://github.com/AmroJSawan/web-lab">Repository</a>
                 </Button>
