@@ -37,7 +37,8 @@ export const fragmentShader = /* glsl */ `
 
   // --- remaining calibration uniforms (engine internals) ---
   uniform float uBlurSigma;  // gaussian sigma for Figma LAYER_BLUR 97.19
-  uniform float uGlassScale; // px offset at refraction=1 with depth profile=1
+  uniform float uGlassScale; // K_REFRACT: px scale for the refraction offset
+  uniform float uGlassDisp;  // K_DISP: px scale for chromatic dispersion width
   uniform float uSpecGain;   // specular rim gain multiplier
 
   // --- per-layer QA toggles (1 = visible) ---
@@ -207,6 +208,17 @@ export const fragmentShader = /* glsl */ `
   #define GLASS_R (0.108596 * uSize.y)
   #define GLASS_DEPTH (0.392482 * uSize.y)
 
+  // Squircle edge height field (Apple/Figma liquid glass): rises steeply at the
+  // border, flattens toward the interior. inside = -sdf, clamped to [0, depth].
+  float glassHeight(float inside) {
+    float x = clamp(inside / GLASS_DEPTH, 0.0, 1.0);
+    return pow(1.0 - pow(1.0 - x, 4.0), 0.25);
+  }
+  float glassH(vec2 p, vec2 center, vec2 halfSize) {
+    float inside = -sdRoundRect(p, center, halfSize, GLASS_R);
+    return glassHeight(max(inside, 0.0));
+  }
+
   vec4 glassLayer(vec2 p) {
     vec2 center = uSize * 0.5;
     vec2 halfSize = uSize * 0.5;
@@ -227,36 +239,45 @@ export const fragmentShader = /* glsl */ `
       return c0;
     }
 
-    // Edge profile: dome over the band [-depth, 0] measured inward. A softer
-    // falloff than the raw circle derivative avoids the "picture frame" look.
-    float t = clamp(-d / GLASS_DEPTH, 0.0, 1.0);      // 0 at edge, 1 at inner limit
-    float slope = pow(1.0 - t, 1.8);
-    // SDF normal (points outward); wide epsilon rounds the corner seams
-    float e = 6.0 * UNIT;
-    vec2 n = normalize(vec2(
-      sdRoundRect(p + vec2(e, 0.0), center, halfSize, GLASS_R) - sdRoundRect(p - vec2(e, 0.0), center, halfSize, GLASS_R),
-      sdRoundRect(p + vec2(0.0, e), center, halfSize, GLASS_R) - sdRoundRect(p - vec2(0.0, e), center, halfSize, GLASS_R)
-    ));
+    // === Surface normal from the squircle height gradient (finite difference).
+    // Flat interior -> N≈(0,0,1) (no distortion); rim -> N tilts outward.
+    float inside = -d;
+    float e = 1.5 * UNIT;
+    float hR = glassH(p + vec2(e, 0.0), center, halfSize);
+    float hL = glassH(p - vec2(e, 0.0), center, halfSize);
+    float hU = glassH(p + vec2(0.0, e), center, halfSize);
+    float hD = glassH(p - vec2(0.0, e), center, halfSize);
+    // Height is 0..1; scale to px by GLASS_DEPTH so the gradient has real slope.
+    vec2 hGrad = vec2(hR - hL, hU - hD) / (2.0 * e) * GLASS_DEPTH;
+    vec3 N = normalize(vec3(-hGrad, 1.0));
 
-    float mag = 0.34 * uGlassScale * UNIT * slope;            // refraction 0.34
-    // Dispersion 0.39: three taps at diverging refraction magnitudes
-    float disp = 0.39 * 0.35;
-    vec2 offR = n * mag * (1.0 - disp);
-    vec2 offG = n * mag;
-    vec2 offB = n * mag * (1.0 + disp);
+    // Edge band weight: 1 at the border, 0 at the inner end of the depth band.
+    float edge = 1.0 - smoothstep(0.0, GLASS_DEPTH, inside);
 
-    // Frost radius 17 -> gaussian sigma ~ 17*0.568
+    // === Refraction offset: Snell-consistent, along the bevel normal.
+    // Figma refraction 0.34; physical bend per surface = 1 - 1/IOR (IOR 1.5).
+    const float REFR = 0.34;
+    const float refrPow = 1.0 - 1.0 / 1.5;             // 0.3333
+    float mag = REFR * refrPow * uGlassScale * UNIT;   // px; uGlassScale = K_REFRACT
+    vec2 refrOff = N.xy * mag;
+
+    // === Dispersion 0.39: R/G/B split about the refracted sample along N.xy,
+    // peaking at the rim.
+    const float DISP = 0.39;
+    float caS = DISP * uGlassDisp * UNIT * (edge * 0.85 + 0.15);
+    vec2 caD = N.xy * caS;
+
+    // === Frost radius 17 -> gaussian sigma ~ 17*0.568. Premultiplied taps.
     float frostSigma = 17.0 * 0.568 * UNIT;
-    // Premultiplied accumulation: transparent taps must not darken the average.
     vec3 acc = vec3(0.0);
     float accA = 0.0;
     const int FT = 6;
     for (int i = 0; i < FT; i++) {
       float a = 6.28318 * (float(i) + 0.5) / float(FT);
       vec2 j = vec2(cos(a), sin(a)) * frostSigma * (0.35 + 0.65 * hash(p + float(i) * 3.1));
-      vec4 sR = backdrop(p + offR + j);
-      vec4 sG = backdrop(p + offG + j);
-      vec4 sB = backdrop(p + offB + j);
+      vec4 sR = backdrop(p + refrOff + caD + j);
+      vec4 sG = backdrop(p + refrOff + j);
+      vec4 sB = backdrop(p + refrOff - caD + j);
       acc.r += sR.r * sR.a;
       acc.g += sG.g * sG.a;
       acc.b += sB.b * sB.a;
@@ -267,14 +288,16 @@ export const fragmentShader = /* glsl */ `
 
     vec4 c = vec4(refracted, alpha);
 
-    // Specular rim: light from lightAngle -45deg, intensity 0.8, splay 0.4.
-    vec2 lightDir = vec2(cos(radians(-45.0)), sin(radians(-45.0)));
-    float facing = dot(-n, lightDir);                  // rim facing the light
-    float splay = mix(2.6, 0.9, 0.4);                  // splay widens angular falloff
-    float rim = pow(clamp(abs(facing), 0.0, 1.0), splay);
-    float rimBand = pow(1.0 - t, 3.0);                 // strongest at the very edge
-    float spec = 0.8 * uSpecGain * rim * rimBand;
-    c.rgb += vec3(spec);
+    // === Specular: Blinn-Phong against N, light placed by lightAngle -45deg,
+    // intensity 0.8; Splay 0.4 widens the lobe (low exponent = broad).
+    vec3 L = normalize(vec3(cos(radians(-45.0)), sin(radians(-45.0)), 0.6));
+    vec3 V = vec3(0.0, 0.0, 1.0);
+    vec3 Hh = normalize(L + V);
+    float shininess = mix(120.0, 8.0, 0.4);            // Splay 0.4
+    float spec = pow(max(dot(N, Hh), 0.0), shininess) * 0.8 * uSpecGain;
+    // Fresnel rim: grazing angles (N tilted away from view) brighten.
+    float fres = pow(1.0 - abs(N.z), 4.0) * 0.8 * uSpecGain;
+    c.rgb += spec + fres * 0.25;
 
     // Fill: vertical white -> #999 gradient, 15% opacity
     if (uShowGlassFill > 0.5) {

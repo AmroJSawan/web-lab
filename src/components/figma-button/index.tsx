@@ -16,6 +16,7 @@ export interface ButtonSettings {
   // Engine internals still calibrated
   blurSigma: number
   glassScale: number
+  glassDisp: number
   specGain: number
   showA: boolean
   showWave: boolean
@@ -37,7 +38,8 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   prAngle: 472, // Transform A 472deg
   prGain: 30, // calibrated against reference/layers/fx-wave-only@2x.png
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
-  glassScale: 28,
+  glassScale: 30, // K_REFRACT (ybouane baseline)
+  glassDisp: 22, // K_DISP (ybouane baseline ~36; softened for rim concentration)
   specGain: 0.45,
   showA: true,
   showWave: true,
@@ -60,6 +62,7 @@ function settingsToUniforms(s: ButtonSettings): Record<string, number> {
     uPRGain: s.prGain,
     uBlurSigma: s.blurSigma,
     uGlassScale: s.glassScale,
+    uGlassDisp: s.glassDisp,
     uSpecGain: s.specGain,
     uShowA: s.showA ? 1 : 0,
     uShowWave: s.showWave ? 1 : 0,

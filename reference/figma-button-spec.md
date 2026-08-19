@@ -52,8 +52,24 @@ Extracted 2026-08-19 via Figma MCP `use_figma` (Plugin API). Reference render: `
 - Pattern Refraction is a WGSL **shader effect**: it refracts the layer's own raster
   (not the backdrop); Edge wrap = texture address mode. Exact wave function unpublished →
   calibrated in `src/components/figma-button/shader.ts` uniforms.
-- Glass is engine-internal (not a shader asset): edge-band refraction of the backdrop —
-  band width = depth, interior gets only Frost (backdrop blur); specular rim at
-  lightAngle/intensity, angular spread = splay; dispersion = per-channel offset.
+- Glass is engine-internal (not a shader asset). Deep-dive model (from 5-agent research
+  cross-checking Apple's Liquid Glass model + 5 code-verified recreations; native WGSL
+  is not extractable — compiled into figma_app.wasm, not in .fig Kiwi, not in Dev Mode):
+  - **Edge height field**: squircle `h(x) = (1 - (1-x)^4)^(1/4)`, x = inside/depth clamped
+    (Apple's documented preferred profile; circular cap `sqrt(d(2·depth-d))` is the fallback).
+  - **Normal**: 3D from the height gradient — `N = normalize(vec3(-hGrad, 1))`. Flat interior
+    N≈(0,0,1) (no distortion, "center stays flat"); rim tilts outward.
+  - **Refraction**: offset along `N.xy`, magnitude `refraction · (1-1/IOR) · K` with IOR 1.5
+    (bend 0.333), edge-band-masked. `depth` is px (API requires ≥1), scales the bend.
+  - **Dispersion**: R/G/B sampled at ±`N.xy · dispersion · K · (edge·0.85+0.15)` — rim-peaked
+    chromatic split; R and B diverge, G at base.
+  - **Specular**: Blinn-Phong `pow(dot(N,H), shininess)·intensity`, light from `lightAngle`;
+    **Splay = the specular exponent** via `mix(120, 8, splay)` (low splay=tight, high=broad);
+    plus a Fresnel rim `pow(1-|N.z|, 4)`.
+  - **Compositing**: `fill OVER (specular + refracted-frosted-backdrop)`. This is why glass is
+    invisible under a 100%-opaque fill — visibility ∝ (1 - fill.alpha). Frost = gaussian
+    backdrop blur folded into the same tap (hence it can't stack with background blur).
+  - Calibration knobs (no source pins them, tune vs the Figma render): K_REFRACT (uGlassScale,
+    ~30), K_DISP (uGlassDisp, ~22-36), Splay exponent endpoints, light z-bias 0.6.
 - Figma gradients interpolate in gamma sRGB, straight (unpremultiplied) alpha.
 - Figma blur value → Gaussian σ: official B/2, measured ≈ 0.568·B.
