@@ -93,8 +93,9 @@ export const fragmentShader = /* glsl */ `
   // ============ Layer A: "FX shader 02" rectangle ============
   // Rect: x -46.858, y -0.045, w 863.848, h 254.881, radius=pill.
   // Fill: vertical linear gradient, white @ 45.19% -> #ABABAB @ 100%.
-  const vec2 A_POS = vec2(-46.858, -0.045);
-  const vec2 A_SIZE = vec2(863.848, 254.881);
+  #define UNIT (uSize.y / 254.789)
+  #define A_POS (vec2(-0.059947, -0.000177) * uSize)
+  #define A_SIZE (vec2(1.105145, 1.000361) * uSize)
 
   vec3 gradA(vec2 p) {
     float t = clamp((p.y - A_POS.y) / A_SIZE.y, 0.0, 1.0);
@@ -164,8 +165,8 @@ export const fragmentShader = /* glsl */ `
   // ============ Layer B: "Solid" pill with LAYER_BLUR 97.19 ============
   // Rect: x 167.169, y 49.574, w 389.677, h 155.640, radius=pill.
   // Fill affine gradient (from Figma gradientTransform), #D3D3D3 -> #FFFFFF.
-  const vec2 B_POS = vec2(167.169, 49.574);
-  const vec2 B_SIZE = vec2(389.677, 155.640);
+  #define B_POS (vec2(0.213865, 0.194570) * uSize)
+  #define B_SIZE (vec2(0.498525, 0.610866) * uSize)
 
   vec3 gradB(vec2 p) {
     vec2 n = (p - B_POS) / B_SIZE;
@@ -176,7 +177,7 @@ export const fragmentShader = /* glsl */ `
   vec4 layerB(vec2 p) {
     if (uShowB < 0.5) return vec4(0.0);
     float d = sdRoundRect(p, B_POS + B_SIZE * 0.5, B_SIZE * 0.5, B_SIZE.y * 0.5);
-    float alpha = 1.0 - blurredStep(d, uBlurSigma);
+    float alpha = 1.0 - blurredStep(d, uBlurSigma * UNIT);
     return vec4(gradB(p), alpha);
   }
 
@@ -200,8 +201,8 @@ export const fragmentShader = /* glsl */ `
   //        lightIntensity 0.8, dispersion 0.39, splay 0.4.
   // Fill: vertical white->#999999 gradient at 15% opacity.
   // INNER_SHADOW: white 25%, offset (0, 4.612), blur 74.016.
-  const float GLASS_R = 27.669;
-  const float GLASS_DEPTH = 100.0;
+  #define GLASS_R (0.108596 * uSize.y)
+  #define GLASS_DEPTH (0.392482 * uSize.y)
 
   vec4 glassLayer(vec2 p) {
     vec2 center = uSize * 0.5;
@@ -215,8 +216,8 @@ export const fragmentShader = /* glsl */ `
           c0 = over(vec4(mix(vec3(1.0), vec3(0.6), gt0), 0.15), c0);
         }
         if (uShowInnerShadow > 0.5) {
-          float ds0 = sdRoundRect(p - vec2(0.0, 4.612), center, halfSize, GLASS_R);
-          float sh0 = 1.0 - blurredStep(-ds0, 74.016 * 0.5);
+          float ds0 = sdRoundRect(p - vec2(0.0, 4.612 * UNIT), center, halfSize, GLASS_R);
+          float sh0 = 1.0 - blurredStep(-ds0, 74.016 * UNIT * 0.5);
           c0.rgb = mix(c0.rgb, vec3(1.0), 0.25 * sh0 * c0.a);
         }
       }
@@ -228,13 +229,13 @@ export const fragmentShader = /* glsl */ `
     float t = clamp(-d / GLASS_DEPTH, 0.0, 1.0);      // 0 at edge, 1 at inner limit
     float slope = pow(1.0 - t, 1.8);
     // SDF normal (points outward); wide epsilon rounds the corner seams
-    float e = 6.0;
+    float e = 6.0 * UNIT;
     vec2 n = normalize(vec2(
       sdRoundRect(p + vec2(e, 0.0), center, halfSize, GLASS_R) - sdRoundRect(p - vec2(e, 0.0), center, halfSize, GLASS_R),
       sdRoundRect(p + vec2(0.0, e), center, halfSize, GLASS_R) - sdRoundRect(p - vec2(0.0, e), center, halfSize, GLASS_R)
     ));
 
-    float mag = 0.34 * uGlassScale * slope;            // refraction 0.34
+    float mag = 0.34 * uGlassScale * UNIT * slope;            // refraction 0.34
     // Dispersion 0.39: three taps at diverging refraction magnitudes
     float disp = 0.39 * 0.35;
     vec2 offR = n * mag * (1.0 - disp);
@@ -242,7 +243,7 @@ export const fragmentShader = /* glsl */ `
     vec2 offB = n * mag * (1.0 + disp);
 
     // Frost radius 17 -> gaussian sigma ~ 17*0.568
-    float frostSigma = 17.0 * 0.568;
+    float frostSigma = 17.0 * 0.568 * UNIT;
     vec3 acc = vec3(0.0);
     float accA = 0.0;
     const int FT = 6;
@@ -278,8 +279,8 @@ export const fragmentShader = /* glsl */ `
 
     // Inner shadow: white 25%, offset (0, 4.612), blur 74.016 (sigma ~ b/2)
     if (uShowInnerShadow > 0.5) {
-      float ds = sdRoundRect(p - vec2(0.0, 4.612), center, halfSize, GLASS_R);
-      float sh = 1.0 - blurredStep(-ds, 74.016 * 0.5); // glow pulling in from edges
+      float ds = sdRoundRect(p - vec2(0.0, 4.612 * UNIT), center, halfSize, GLASS_R);
+      float sh = 1.0 - blurredStep(-ds, 74.016 * UNIT * 0.5); // glow pulling in from edges
       c.rgb = mix(c.rgb, vec3(1.0), 0.25 * sh * c.a);
     }
 
@@ -290,8 +291,8 @@ export const fragmentShader = /* glsl */ `
   // radius 97.996, stroke weight 6.917 CENTER.
   // Stroke gradient: #D4D4D4 0% -> #E0E1F8 49.04% -> #FFFFFF 100%,
   // t = 0.6875*nx + 0.0843*ny + 0.0979 (from gradientTransform).
-  const float FRAME_R = 97.996;
-  const float STROKE_W = 6.917;
+  #define FRAME_R (0.384618 * uSize.y)
+  #define STROKE_W (0.027149 * uSize.y)
 
   vec3 strokeGrad(vec2 p) {
     vec2 nrm = p / uSize;

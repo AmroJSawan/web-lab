@@ -40,7 +40,7 @@ export function FigmaButtonLab() {
   return (
     <div className="flex w-full flex-col items-center gap-6">
       <div className="w-full max-w-[820px] px-2">
-        <FigmaButton fit />
+        <FigmaButton fit settings={settings} />
       </div>
 
       <div className="grid w-full max-w-3xl gap-6 rounded-xl border bg-card p-5 sm:grid-cols-2">

@@ -1,4 +1,4 @@
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { FRAME_H, FRAME_W, fragmentShader, vertexShader } from './shader'
@@ -26,8 +26,7 @@ export interface ButtonSettings {
   showText: boolean
 }
 
-// Tuned against reference/figma-button@2x.png. Figma-published values live in
-// the shader as constants; these cover the unpublished internals.
+// Figma node values; engine internals tuned against reference/figma-button@2x.png.
 export const DEFAULT_SETTINGS: ButtonSettings = {
   prStrength: 0.61, // Strength 61
   prSmoothness: 0, // Smoothness 0
@@ -69,16 +68,26 @@ function settingsToUniforms(s: ButtonSettings): Record<string, number> {
   }
 }
 
-function GlassQuad({ settings }: { settings: ButtonSettings }) {
-  const material = useRef<THREE.ShaderMaterial>(null)
+interface GlassQuadProps {
+  settings: ButtonSettings
+  width: number
+  height: number
+}
 
+function GlassQuad({ settings, width, height }: GlassQuadProps) {
+  const material = useRef<THREE.ShaderMaterial>(null)
+  const invalidate = useThree((state) => state.invalidate)
+
+  // Demand rendering: sync uniforms on every change, then request one frame.
   useEffect(() => {
     if (!material.current) return
     const uniforms = material.current.uniforms
+    uniforms.uSize.value.set(width, height)
     for (const [key, value] of Object.entries(settingsToUniforms(settings))) {
       if (uniforms[key]) uniforms[key].value = value
     }
-  }, [settings])
+    invalidate()
+  }, [settings, width, height, invalidate])
 
   return (
     <mesh>
@@ -90,7 +99,7 @@ function GlassQuad({ settings }: { settings: ButtonSettings }) {
         transparent
         premultipliedAlpha
         uniforms={{
-          uSize: { value: new THREE.Vector2(FRAME_W, FRAME_H) },
+          uSize: { value: new THREE.Vector2(width, height) },
           uPageBg: { value: new THREE.Color('#1e1e1e') },
           uPageBgAlpha: { value: 0 },
           uPRCenter: { value: new THREE.Vector2(0.48, 0.5) }, // Transform X 48% Y 50%
@@ -100,6 +109,21 @@ function GlassQuad({ settings }: { settings: ButtonSettings }) {
         }}
       />
     </mesh>
+  )
+}
+
+/** The Figma material rendered on a quad of arbitrary size (size-relative geometry). */
+export function GlassMaterialCanvas({ settings, width, height }: GlassQuadProps) {
+  return (
+    <Canvas
+      dpr={[1, 2]}
+      frameloop="demand"
+      gl={{ antialias: true, alpha: true, premultipliedAlpha: true }}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      orthographic
+    >
+      <GlassQuad settings={settings} width={width} height={height} />
+    </Canvas>
   )
 }
 
@@ -135,17 +159,7 @@ export function FigmaButton({ scale = 1, fit = false, settings = DEFAULT_SETTING
 
   return (
     <div ref={container} className="relative" style={{ width: FRAME_W * s, height: FRAME_H * s }}>
-      {/* The shader draws in normalized UV, so the canvas can render at any
-          size directly — no CSS transform (R3F measures transformed rects,
-          which would double-apply the scale). */}
-      <Canvas
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true, premultipliedAlpha: true }}
-        style={{ position: 'absolute', inset: 0 }}
-        orthographic
-      >
-        <GlassQuad settings={settings} />
-      </Canvas>
+      <GlassMaterialCanvas settings={settings} width={FRAME_W * s} height={FRAME_H * s} />
       {/* Text node 48751:1352 "Hello": Noto Kufi Arabic 400 @110.68px,
           letter-spacing -6%, box 243x210 at (269.78, 21.84), v-centered.
           Laid out at full frame size, scaled as one plane. */}

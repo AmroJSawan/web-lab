@@ -2,8 +2,8 @@ import { lazy, Suspense } from 'react'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 
-const FigmaButton = lazy(() =>
-  import('@/components/figma-button').then((m) => ({ default: m.FigmaButton })),
+const MaterialButton = lazy(() =>
+  import('@/components/figma-button/material-button').then((m) => ({ default: m.MaterialButton })),
 )
 const FigmaButtonLab = lazy(() =>
   import('@/components/figma-button/lab').then((m) => ({ default: m.FigmaButtonLab })),
@@ -63,12 +63,12 @@ export default function App() {
                 ))}
               </ul>
               <div className="flex items-center gap-3">
-                <Suspense fallback={<div style={{ width: 141, height: 46 }} />}>
-                  <FigmaButton scale={0.18} />
-                </Suspense>
                 <Button asChild>
                   <a href="https://github.com/AmroJSawan/web-lab">Repository</a>
                 </Button>
+                <Suspense fallback={<div className="h-9 w-32" />}>
+                  <MaterialButton>shadcn/ui docs</MaterialButton>
+                </Suspense>
                 <Button asChild variant="outline">
                   <a href="https://ui.shadcn.com">shadcn/ui docs</a>
                 </Button>
