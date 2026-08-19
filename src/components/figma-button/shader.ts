@@ -95,6 +95,8 @@ export const fragmentShader = /* glsl */ `
   // Rect: x -46.858, y -0.045, w 863.848, h 254.881, radius=pill.
   // Fill: vertical linear gradient, white @ 45.19% -> #ABABAB @ 100%.
   #define UNIT (uSize.y / 254.789)
+  // Bleed margin (px): half the centered stroke + antialias headroom.
+  #define BLEED_PX (0.02 * uSize.y)
   #define A_POS (vec2(-0.059947, -0.000177) * uSize)
   #define A_SIZE (vec2(1.105145, 1.000361) * uSize)
 
@@ -308,7 +310,9 @@ export const fragmentShader = /* glsl */ `
   }
 
   void main() {
-    vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uSize;  // Figma y-down coordinates
+    // Figma y-down coordinates over a domain extended by BLEED on every side,
+    // so the centered stroke's outer half is not cut by the canvas bounds.
+    vec2 p = vec2(vUv.x, 1.0 - vUv.y) * (uSize + 2.0 * BLEED_PX) - BLEED_PX;
 
     vec4 c = glassLayer(p);
 

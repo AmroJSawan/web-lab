@@ -117,12 +117,14 @@ function GlassQuad({ settings, width, height }: GlassQuadProps) {
 
 /** The Figma material rendered on a quad of arbitrary size (size-relative geometry). */
 export function GlassMaterialCanvas({ settings, width, height }: GlassQuadProps) {
+  // Matches the shader's BLEED_PX: room for the centered stroke's outer half.
+  const bleed = 0.02 * height
   return (
     <Canvas
       dpr={[1, 2]}
       frameloop="demand"
       gl={{ antialias: true, alpha: true, premultipliedAlpha: true }}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      style={{ position: 'absolute', inset: -bleed, pointerEvents: 'none' }}
       orthographic
     >
       <GlassQuad settings={settings} width={width} height={height} />
