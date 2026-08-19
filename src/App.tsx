@@ -66,7 +66,7 @@ export default function App() {
                 <Button asChild>
                   <a href="https://github.com/AmroJSawan/web-lab">Repository</a>
                 </Button>
-                <Suspense fallback={<div className="h-9 w-32" />}>
+                <Suspense fallback={<Button variant="outline">shadcn/ui docs</Button>}>
                   <MaterialButton>shadcn/ui docs</MaterialButton>
                 </Suspense>
                 <Button asChild variant="outline">

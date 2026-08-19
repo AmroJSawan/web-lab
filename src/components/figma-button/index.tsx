@@ -1,4 +1,4 @@
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { FRAME_H, FRAME_W, fragmentShader, vertexShader } from './shader'
@@ -115,19 +115,48 @@ function GlassQuad({ settings, width, height }: GlassQuadProps) {
   )
 }
 
+/** Fires once, after the shader has actually painted its first frame. */
+function FirstFrame({ onReady }: { onReady?: () => void }) {
+  const fired = useRef(false)
+  useFrame(() => {
+    if (fired.current) return
+    fired.current = true
+    onReady?.()
+  })
+  return null
+}
+
+interface GlassMaterialCanvasProps extends GlassQuadProps {
+  onReady?: () => void
+  fadeIn?: boolean
+}
+
 /** The Figma material rendered on a quad of arbitrary size (size-relative geometry). */
-export function GlassMaterialCanvas({ settings, width, height }: GlassQuadProps) {
+export function GlassMaterialCanvas({ settings, width, height, onReady, fadeIn = false }: GlassMaterialCanvasProps) {
   // Matches the shader's BLEED_PX: room for the centered stroke's outer half.
   const bleed = 0.02 * height
+  const [painted, setPainted] = useState(!fadeIn)
   return (
     <Canvas
       dpr={[1, 2]}
       frameloop="demand"
       gl={{ antialias: true, alpha: true, premultipliedAlpha: true }}
-      style={{ position: 'absolute', inset: -bleed, pointerEvents: 'none' }}
+      style={{
+        position: 'absolute',
+        inset: -bleed,
+        pointerEvents: 'none',
+        opacity: painted ? 1 : 0,
+        transition: 'opacity 500ms ease',
+      }}
       orthographic
     >
       <GlassQuad settings={settings} width={width} height={height} />
+      <FirstFrame
+        onReady={() => {
+          setPainted(true)
+          onReady?.()
+        }}
+      />
     </Canvas>
   )
 }
