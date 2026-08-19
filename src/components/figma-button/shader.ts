@@ -33,6 +33,7 @@ export const fragmentShader = /* glsl */ `
   uniform float uPRStripWidth; // Figma Transform R / 100
   uniform float uPRAngle;      // Figma Transform A, degrees (unclamped)
   uniform vec2  uPRCenter;     // Figma Transform X/Y as fractions
+  uniform float uPRGain;       // displacement gain: Figma's real amplitude vs the port's normalized constant
 
   // --- remaining calibration uniforms (engine internals) ---
   uniform float uBlurSigma;  // gaussian sigma for Figma LAYER_BLUR 97.19
@@ -126,7 +127,7 @@ export const fragmentShader = /* glsl */ `
     float sharp = sign(n) * pow(abs(n), 8.0);
     float soft = sin(n * TAU * 0.5) * n * n; // waves variant keeps bend at boundary
     float shape = mix(sharp, soft, uPRSmooth);
-    float disp = 0.3 * uPRStripWidth * stDisp * shape;
+    float disp = 0.3 * uPRStripWidth * stDisp * shape * uPRGain;
     q.x += disp;
     // Refraction follows the bent grid: y shift = x shift times grid slope.
     q.y += disp * cos(bendPhase) * stGrid * 0.5 * TAU / 5.0;
@@ -244,20 +245,23 @@ export const fragmentShader = /* glsl */ `
 
     // Frost radius 17 -> gaussian sigma ~ 17*0.568
     float frostSigma = 17.0 * 0.568 * UNIT;
+    // Premultiplied accumulation: transparent taps must not darken the average.
     vec3 acc = vec3(0.0);
     float accA = 0.0;
     const int FT = 6;
     for (int i = 0; i < FT; i++) {
       float a = 6.28318 * (float(i) + 0.5) / float(FT);
       vec2 j = vec2(cos(a), sin(a)) * frostSigma * (0.35 + 0.65 * hash(p + float(i) * 3.1));
-      acc.r += backdrop(p + offR + j).r;
-      vec4 g = backdrop(p + offG + j);
-      acc.g += g.g;
-      accA += g.a;
-      acc.b += backdrop(p + offB + j).b;
+      vec4 sR = backdrop(p + offR + j);
+      vec4 sG = backdrop(p + offG + j);
+      vec4 sB = backdrop(p + offB + j);
+      acc.r += sR.r * sR.a;
+      acc.g += sG.g * sG.a;
+      acc.b += sB.b * sB.a;
+      accA += sG.a;
     }
-    vec3 refracted = acc / float(FT);
     float alpha = accA / float(FT);
+    vec3 refracted = alpha > 0.001 ? acc / float(FT) / alpha : vec3(0.0);
 
     vec4 c = vec4(refracted, alpha);
 

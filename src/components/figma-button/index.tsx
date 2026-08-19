@@ -12,6 +12,7 @@ export interface ButtonSettings {
   prDispersion: number
   prStripWidth: number
   prAngle: number // degrees
+  prGain: number // displacement gain vs the port's normalized constant
   // Engine internals still calibrated
   blurSigma: number
   glassScale: number
@@ -32,8 +33,9 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   prSmoothness: 0, // Smoothness 0
   prFrost: 1, // Frost 100
   prDispersion: 0, // Dispersion 0
-  prStripWidth: 0.12, // Transform R 12
+  prStripWidth: 0.3, // Transform R 12% -> ~0.3 in port UV space (calibrated vs fx-wave-only isolate)
   prAngle: 472, // Transform A 472deg
+  prGain: 30, // calibrated against reference/layers/fx-wave-only@2x.png
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
   glassScale: 28,
   specGain: 0.45,
@@ -55,6 +57,7 @@ function settingsToUniforms(s: ButtonSettings): Record<string, number> {
     uPRDispersion: s.prDispersion,
     uPRStripWidth: Math.max(0.001, s.prStripWidth),
     uPRAngle: s.prAngle,
+    uPRGain: s.prGain,
     uBlurSigma: s.blurSigma,
     uGlassScale: s.glassScale,
     uSpecGain: s.specGain,
