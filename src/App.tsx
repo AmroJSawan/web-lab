@@ -1,5 +1,10 @@
+import { lazy, Suspense } from 'react'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
+
+const FigmaButton = lazy(() =>
+  import('@/components/figma-button').then((m) => ({ default: m.FigmaButton })),
+)
 import {
   Card,
   CardContent,
@@ -21,7 +26,16 @@ const stack = [
 export default function App() {
   return (
     <div className="min-h-svh text-foreground">
-      <main className="mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-8 px-6 py-16">
+      <section className="flex flex-col items-center gap-4 px-6 pt-16">
+        <p className="text-sm text-muted-foreground">
+          Experiment 01: Figma shader parity — wave refraction + glass
+        </p>
+        <Suspense fallback={<div style={{ width: 782, height: 255 }} />}>
+          <FigmaButton />
+        </Suspense>
+      </section>
+
+      <main className="mx-auto flex max-w-3xl flex-col items-center justify-center gap-8 px-6 py-16">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
