@@ -175,6 +175,7 @@ interface FigmaButtonProps {
 export function FigmaButton({ scale = 1, fit = false, settings = DEFAULT_SETTINGS }: FigmaButtonProps) {
   const container = useRef<HTMLDivElement>(null)
   const [fitScale, setFitScale] = useState(1)
+  const [materialReady, setMaterialReady] = useState(false)
 
   useLayoutEffect(() => {
     if (!fit || !container.current) return
@@ -192,8 +193,27 @@ export function FigmaButton({ scale = 1, fit = false, settings = DEFAULT_SETTING
   const s = fit ? fitScale * scale : scale
 
   return (
-    <div ref={container} className="relative" style={{ width: FRAME_W * s, height: FRAME_H * s }}>
-      <GlassMaterialCanvas settings={settings} width={FRAME_W * s} height={FRAME_H * s} />
+    <div
+      ref={container}
+      className="relative transition-colors duration-500"
+      style={{
+        width: FRAME_W * s,
+        height: FRAME_H * s,
+        // Plain placeholder pill (frame geometry, shadcn-style surface) shown
+        // instantly; fades out once the material has painted its first frame.
+        borderRadius: 97.996 * s,
+        border: materialReady ? '1px solid transparent' : '1px solid var(--input)',
+        backgroundColor: materialReady ? 'transparent' : 'var(--background)',
+        boxShadow: materialReady ? 'none' : '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+      }}
+    >
+      <GlassMaterialCanvas
+        settings={settings}
+        width={FRAME_W * s}
+        height={FRAME_H * s}
+        fadeIn
+        onReady={() => setMaterialReady(true)}
+      />
       {/* Text node 48751:1352 "Hello": Noto Kufi Arabic 400 @110.68px,
           letter-spacing -6%, box 243x210 at (269.78, 21.84), v-centered.
           Laid out at full frame size, scaled as one plane. */}
@@ -213,7 +233,8 @@ export function FigmaButton({ scale = 1, fit = false, settings = DEFAULT_SETTING
               fontWeight: 400,
               fontSize: 110.678,
               letterSpacing: '-0.06em',
-              color: '#000',
+              color: materialReady ? '#000' : 'var(--foreground)',
+              transition: 'color 500ms ease',
               whiteSpace: 'nowrap',
             }}
           >

@@ -33,7 +33,11 @@ export default function App() {
         <p className="text-sm text-muted-foreground">
           Experiment 01: Figma shader parity — wave refraction + glass
         </p>
-        <Suspense fallback={<div style={{ width: 782, height: 255 }} />}>
+        <Suspense
+          fallback={
+            <div className="h-[255px] w-full max-w-[782px] rounded-[98px] border bg-background shadow-xs" />
+          }
+        >
           <FigmaButtonLab />
         </Suspense>
       </section>
