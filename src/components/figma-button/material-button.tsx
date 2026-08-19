@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { DEFAULT_SETTINGS, GlassMaterialCanvas, type ButtonSettings } from './index'
+import { GlassMaterialCanvas, type ButtonSettings } from './index'
+import { useSharedSettings } from './settings-store'
 
 interface MaterialButtonProps {
   children: ReactNode
@@ -14,9 +15,12 @@ interface MaterialButtonProps {
  * button's own dimensions — the shader geometry is size-relative, so the
  * material re-renders for this shape rather than being a scaled screenshot.
  */
-export function MaterialButton({ children, settings = DEFAULT_SETTINGS, className }: MaterialButtonProps) {
+export function MaterialButton({ children, settings, className }: MaterialButtonProps) {
   const el = useRef<HTMLButtonElement>(null)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  // Inherit the live shared calibration unless explicitly overridden
+  const shared = useSharedSettings()
+  const applied = settings ?? shared
 
   useLayoutEffect(() => {
     if (!el.current) return
@@ -40,7 +44,7 @@ export function MaterialButton({ children, settings = DEFAULT_SETTINGS, classNam
         (className ?? '')
       }
     >
-      {size && <GlassMaterialCanvas settings={settings} width={size.w} height={size.h} />}
+      {size && <GlassMaterialCanvas settings={applied} width={size.w} height={size.h} />}
       <span className="relative z-10 text-black">{children}</span>
     </button>
   )

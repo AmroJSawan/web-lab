@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { DEFAULT_SETTINGS, FigmaButton, type ButtonSettings } from './index'
+import { setSharedSettings, useSharedSettings } from './settings-store'
 
 const LAYER_TOGGLES: Array<{ key: keyof ButtonSettings; label: string }> = [
   { key: 'showA', label: 'FX shader 02 (wave layer)' },
@@ -33,10 +33,10 @@ const SLIDERS: Array<{
 
 /** QA harness: the full-size button plus per-layer visibility and calibration controls. */
 export function FigmaButtonLab() {
-  const [settings, setSettings] = useState<ButtonSettings>(DEFAULT_SETTINGS)
+  const settings = useSharedSettings()
 
   const set = (key: keyof ButtonSettings, value: boolean | number) =>
-    setSettings((s) => ({ ...s, [key]: value }))
+    setSharedSettings({ ...settings, [key]: value })
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
@@ -82,7 +82,7 @@ export function FigmaButtonLab() {
           <button
             type="button"
             className="mt-1 self-start rounded-md border px-3 py-1.5 text-xs hover:bg-muted"
-            onClick={() => setSettings(DEFAULT_SETTINGS)}
+            onClick={() => setSharedSettings(DEFAULT_SETTINGS)}
           >
             Reset to defaults
           </button>
