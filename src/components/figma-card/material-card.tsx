@@ -57,7 +57,7 @@ export function MaterialCard() {
       {/* CSS/SVG liquid glass over the material (user's reference technique) */}
       {cardSurface && settings.showLiquidGlass && (
         <Suspense fallback={null}>
-          <LiquidGlass />
+          <LiquidGlass frost={settings.liquidFrost} />
         </Suspense>
       )}
 

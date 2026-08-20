@@ -9,7 +9,7 @@
  * backdrop-filter, which accepts SVG filters in Chromium only — Safari and
  * Firefox gracefully degrade to the overlay + specular without distortion.
  */
-export function LiquidGlass() {
+export function LiquidGlass({ frost = 6 }: { frost?: number }) {
   return (
     <>
       <svg aria-hidden="true" width="0" height="0" style={{ position: 'absolute' }}>
@@ -38,8 +38,8 @@ export function LiquidGlass() {
       <div
         className="pointer-events-none absolute inset-0 z-[1]"
         style={{
-          backdropFilter: 'url(#lg-dist) blur(0px)',
-          WebkitBackdropFilter: 'blur(0px)',
+          backdropFilter: `url(#lg-dist) blur(${frost}px)`,
+          WebkitBackdropFilter: `blur(${frost}px)`,
           isolation: 'isolate',
         }}
       />

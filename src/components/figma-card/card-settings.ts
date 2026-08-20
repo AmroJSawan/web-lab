@@ -19,6 +19,7 @@ export interface CardSettings {
   showFxFx: boolean // the refraction chain (off = plain peach fill)
   showGlass: boolean
   showLiquidGlass: boolean // CSS/SVG liquid glass (user's reference technique)
+  liquidFrost: number // backdrop blur px on the liquid glass
   showGlassFill: boolean
   showInner: boolean
   showStroke: boolean
@@ -46,6 +47,7 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
   showFxFx: true,
   showGlass: false, // WebGL glass off; replaced by the CSS liquid glass below
   showLiquidGlass: true, // CSS/SVG liquid glass from the user's reference
+  liquidFrost: 6, // frost blur px
   showGlassFill: false, // its 20% fill overlay
   showInner: false, // its inner shadow
   showStroke: true,
