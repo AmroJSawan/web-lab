@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { ButtonExperiment } from '@/pages/button-experiment'
 import { CardExperiment } from '@/pages/card-experiment'
+import { CarouselExperiment } from '@/pages/carousel-experiment'
 import { cn } from '@/lib/utils'
 
 // Minimal hash router — no dependency, works on GitHub Pages sub-path.
@@ -18,11 +19,16 @@ function useHash() {
 const NAV = [
   { hash: '#/button', label: 'Button' },
   { hash: '#/card', label: 'Card' },
+  { hash: '#/carousel', label: 'Carousel' },
 ]
 
 export default function App() {
   const hash = useHash()
-  const route = hash.startsWith('#/card') ? 'card' : 'button'
+  const route = hash.startsWith('#/carousel')
+    ? 'carousel'
+    : hash.startsWith('#/card')
+      ? 'card'
+      : 'button'
 
   return (
     <div className="min-h-svh text-foreground">
@@ -45,7 +51,13 @@ export default function App() {
         })}
       </nav>
 
-      {route === 'card' ? <CardExperiment /> : <ButtonExperiment />}
+      {route === 'carousel' ? (
+        <CarouselExperiment />
+      ) : route === 'card' ? (
+        <CardExperiment />
+      ) : (
+        <ButtonExperiment />
+      )}
     </div>
   )
 }

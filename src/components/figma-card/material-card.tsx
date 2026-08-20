@@ -32,8 +32,9 @@ const ButtonGlassSurface = lazy(() =>
  * corner radius; badge/button materials change only colors and shadows
  * (borders stay in the box via color swaps / inset rings, never new borders).
  */
-export function MaterialCard() {
-  const settings = useCardSettings()
+export function MaterialCard({ settings: settingsProp }: { settings?: import('./card-settings').CardSettings } = {}) {
+  const shared = useCardSettings()
+  const settings = settingsProp ?? shared
   const cardSurface = settings.showCardSurface
   const badgeSurface = settings.showBadgeSurface
   const buttonSurface = settings.showButtonSurface
