@@ -2,17 +2,21 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { cardFragmentShader, cardVertexShader } from './card-material'
+import {
+  cardSettingsToUniforms,
+  DEFAULT_CARD_SETTINGS,
+  type CardSettings,
+} from './card-settings'
 
 interface QuadProps {
   width: number
   height: number
   radius: number
-  warm: number
-  specGain: number
+  settings: CardSettings
   onReady?: () => void
 }
 
-function CardQuad({ width, height, radius, warm, specGain, onReady }: QuadProps) {
+function CardQuad({ width, height, radius, settings, onReady }: QuadProps) {
   const material = useRef<THREE.ShaderMaterial>(null)
   const invalidate = useThree((s) => s.invalidate)
   const fired = useRef(false)
@@ -22,14 +26,15 @@ function CardQuad({ width, height, radius, warm, specGain, onReady }: QuadProps)
     const u = material.current.uniforms
     u.uSize.value.set(width, height)
     u.uRadius.value = radius
-    u.uWarm.value = warm
-    u.uSpecGain.value = specGain
+    for (const [k, v] of Object.entries(cardSettingsToUniforms(settings))) {
+      if (u[k]) u[k].value = v
+    }
     invalidate()
     if (!fired.current) {
       fired.current = true
       requestAnimationFrame(() => onReady?.())
     }
-  }, [width, height, radius, warm, specGain, invalidate, onReady])
+  }, [width, height, radius, settings, invalidate, onReady])
 
   return (
     <mesh>
@@ -43,8 +48,12 @@ function CardQuad({ width, height, radius, warm, specGain, onReady }: QuadProps)
         uniforms={{
           uSize: { value: new THREE.Vector2(width, height) },
           uRadius: { value: radius },
-          uWarm: { value: warm },
-          uSpecGain: { value: specGain },
+          ...Object.fromEntries(
+            Object.entries(cardSettingsToUniforms(DEFAULT_CARD_SETTINGS)).map(([k, v]) => [
+              k,
+              { value: v },
+            ]),
+          ),
         }}
       />
     </mesh>
@@ -53,14 +62,18 @@ function CardQuad({ width, height, radius, warm, specGain, onReady }: QuadProps)
 
 interface CardSurfaceProps {
   radius?: number
-  warm?: number
-  specGain?: number
+  settings?: CardSettings
   fadeIn?: boolean
   onReady?: () => void
 }
 
 /** Full-bleed WebGL material surface, clipped by the parent's rounded corners. */
-export function CardSurface({ radius = 29, warm = 1, specGain = 0.5, fadeIn = true, onReady }: CardSurfaceProps) {
+export function CardSurface({
+  radius = 29,
+  settings = DEFAULT_CARD_SETTINGS,
+  fadeIn = true,
+  onReady,
+}: CardSurfaceProps) {
   const wrap = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
   const [painted, setPainted] = useState(!fadeIn)
@@ -78,7 +91,6 @@ export function CardSurface({ radius = 29, warm = 1, specGain = 0.5, fadeIn = tr
     return () => observer.disconnect()
   }, [])
 
-  // scale the design radius (853x524, r29) to the rendered card width
   const scaledRadius = size ? radius * (size.w / 853.01) : radius
 
   return (
@@ -99,8 +111,7 @@ export function CardSurface({ radius = 29, warm = 1, specGain = 0.5, fadeIn = tr
             width={size.w}
             height={size.h}
             radius={scaledRadius}
-            warm={warm}
-            specGain={specGain}
+            settings={settings}
             onReady={() => {
               setPainted(true)
               onReady?.()

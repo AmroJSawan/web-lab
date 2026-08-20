@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { MaterialCard } from '@/components/figma-card/material-card'
+import { CardLab } from '@/components/figma-card/card-lab'
 
 export function CardExperiment() {
   return (
@@ -13,7 +13,7 @@ export function CardExperiment() {
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className="w-full"
       >
-        <MaterialCard />
+        <CardLab />
       </motion.div>
     </main>
   )

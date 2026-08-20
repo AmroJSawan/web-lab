@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { useCardSettings } from './card-settings'
 
 const CardSurface = lazy(() =>
   import('./card-surface').then((m) => ({ default: m.CardSurface })),
@@ -18,11 +19,15 @@ const CardSurface = lazy(() =>
  *   - Button background-> glossy dark glass (CSS gradient + sheen + gradient rim)
  */
 export function MaterialCard() {
+  const settings = useCardSettings()
+  const badgeSurface = settings.showBadgeSurface
+  const buttonSurface = settings.showButtonSurface
+
   return (
     <Card className="relative w-full max-w-[853px] overflow-hidden rounded-[29px] border-0 p-0 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.25)]">
       {/* Inherited card surface */}
       <Suspense fallback={<div className="absolute inset-0 bg-background" />}>
-        <CardSurface />
+        <CardSurface settings={settings} />
       </Suspense>
 
       <CardContent className="relative z-10 flex flex-col gap-0 p-8">
@@ -31,7 +36,9 @@ export function MaterialCard() {
           variant="secondary"
           className={cn(
             'h-auto gap-2 self-start rounded-[19px] border px-4 py-2 text-sm font-medium text-foreground',
-            'border-white/60 bg-white/25 shadow-sm backdrop-blur-md',
+            badgeSurface
+              ? 'border-white/60 bg-white/25 shadow-sm backdrop-blur-md'
+              : 'border-border bg-secondary',
           )}
         >
           <span className="size-2 rounded-full bg-foreground" />
@@ -52,11 +59,10 @@ export function MaterialCard() {
         {/* Glossy dark-glass button (shadcn Button, surface inherited) */}
         <Button
           className={cn(
-            'mt-14 h-auto self-start rounded-[21px] border px-7 py-3 text-base font-normal',
-            'border-white/15 text-white',
-            'bg-[radial-gradient(120%_140%_at_30%_-20%,#3a3a3a_0%,#111_45%,#000_100%)]',
-            'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.18),0_10px_24px_-8px_rgba(0,0,0,0.55)]',
-            'hover:brightness-125',
+            'mt-14 h-auto self-start rounded-[21px] px-7 py-3 text-base font-normal',
+            buttonSurface
+              ? 'border border-white/15 text-white bg-[radial-gradient(120%_140%_at_30%_-20%,#3a3a3a_0%,#111_45%,#000_100%)] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.18),0_10px_24px_-8px_rgba(0,0,0,0.55)] hover:brightness-125'
+              : '',
           )}
         >
           See more

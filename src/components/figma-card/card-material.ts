@@ -19,8 +19,22 @@ export const cardFragmentShader = /* glsl */ `
 
   uniform vec2  uSize;      // px
   uniform float uRadius;    // corner radius px
-  uniform float uWarm;      // 0..1 warm-material intensity
+  uniform float uWarm;      // warm-material intensity
+  uniform float uPeach;     // peach amount
+  uniform float uGreen;     // green band amount
+  uniform float uBandFreq;  // flow band frequency
+  uniform float uBandStr;   // flow band strength
+  uniform float uWarp;      // domain-warp amount
   uniform float uSpecGain;  // glass rim specular gain
+  uniform float uRimRefract;// rim refraction px scale
+
+  // per-surface toggles (1 = on)
+  uniform float uShowWarm;
+  uniform float uShowRim;
+  uniform float uShowSpec;
+  uniform float uShowInner;
+  uniform float uShowFill;
+  uniform float uShowStroke;
 
   #define UNIT (uSize.y / 524.37)
 
@@ -45,28 +59,30 @@ export const cardFragmentShader = /* glsl */ `
     vec3 peach     = vec3(0.929, 0.601, 0.383);
     vec3 cream     = vec3(0.984, 0.945, 0.905);
 
+    if (uShowWarm < 0.5) return white;
+
     // domain warp for the organic flow
     vec2 p = uv;
-    float w = sin(p.y * 5.0 + p.x * 2.2) * 0.07
+    float w = (sin(p.y * 5.0 + p.x * 2.2) * 0.07
             + sin(p.y * 9.5 - p.x * 1.4) * 0.035
-            + (vnoise(p * 3.0) - 0.5) * 0.06;
+            + (vnoise(p * 3.0) - 0.5) * 0.06) * uWarp;
     float fx = p.x + w;
 
     // soft flowing streaks along the flow direction
-    float bands = 0.5 + 0.5 * sin(fx * 13.0 + sin(p.y * 3.2) * 1.6);
-    bands = mix(0.5, bands, 0.7);
+    float bands = 0.5 + 0.5 * sin(fx * uBandFreq + sin(p.y * 3.2) * 1.6);
+    bands = mix(0.5, bands, uBandStr);
 
     // right-biased warm mask, plus a lower-right boost
     float warm = smoothstep(0.28, 0.98, fx);
     warm *= mix(0.7, 1.2, smoothstep(0.1, 1.0, p.y));
 
     // faint green band left of the warm zone
-    float green = exp(-pow((fx - 0.44) / 0.15, 2.0)) * 0.65;
+    float green = exp(-pow((fx - 0.44) / 0.15, 2.0)) * uGreen;
 
     vec3 col = white;
     col = mix(col, paleGreen, green * (0.45 + 0.55 * bands) * uWarm);
     col = mix(col, cream, warm * 0.4 * uWarm);
-    col = mix(col, peach, clamp(warm * (0.32 + 0.68 * bands) * 0.9, 0.0, 1.0) * uWarm);
+    col = mix(col, peach, clamp(warm * (0.32 + 0.68 * bands) * uPeach, 0.0, 1.0) * uWarm);
     return col;
   }
 
@@ -91,6 +107,7 @@ export const cardFragmentShader = /* glsl */ `
     float d = sdRoundRect(p - center, hsize, uRadius);
 
     vec3 base = warmMaterial(uv);
+    vec3 col = base;
 
     // Glass rim: light refraction of the material + specular + inner-shadow glow.
     float depth = 120.82 * UNIT;
@@ -104,36 +121,45 @@ export const cardFragmentShader = /* glsl */ `
     vec3 N = normalize(vec3(-hGrad, 1.0));
     float edge = 1.0 - smoothstep(0.0, depth, inside);
 
-    // refract the material slightly along the rim normal
-    float mag = 0.84 * (1.0 - 1.0/1.5) * 26.0 * UNIT;
-    vec2 refr = N.xy * mag / uSize;
-    vec3 col = warmMaterial(uv + vec2(refr.x, -refr.y));
-    col = mix(base, col, edge);
+    if (uShowRim > 0.5) {
+      // refract the material slightly along the rim normal
+      float mag = 0.84 * (1.0 - 1.0/1.5) * uRimRefract * UNIT;
+      vec2 refr = N.xy * mag / uSize;
+      col = mix(base, warmMaterial(uv + vec2(refr.x, -refr.y)), edge);
+    }
 
-    // specular (lightAngle 293deg) + fresnel, whitening the rim
-    vec3 L = normalize(vec3(cos(radians(293.0)), sin(radians(293.0)), 0.6));
-    vec3 H = normalize(L + vec3(0,0,1));
-    float shin = mix(120.0, 8.0, 0.4);
-    float spec = pow(max(dot(N,H),0.0), shin) * uSpecGain;
-    float fres = pow(1.0 - abs(N.z), 4.0) * uSpecGain;
-    col += spec + fres * 0.2;
+    if (uShowSpec > 0.5) {
+      // specular (lightAngle 293deg) + fresnel, whitening the rim
+      vec3 L = normalize(vec3(cos(radians(293.0)), sin(radians(293.0)), 0.6));
+      vec3 H = normalize(L + vec3(0,0,1));
+      float shin = mix(120.0, 8.0, 0.4);
+      float spec = pow(max(dot(N,H),0.0), shin) * uSpecGain;
+      float fres = pow(1.0 - abs(N.z), 4.0) * uSpecGain;
+      col += spec + fres * 0.2;
+    }
 
-    // inner shadow: white 25%, blur 77.6 -> soft inward glow from edges
-    float sh = 1.0 - clamp(0.5 + 0.5*(-sdRoundRect(p - vec2(0.0, 4.83*UNIT) - center, hsize, uRadius))/(77.57*UNIT*0.5*1.6), 0.0, 1.0);
-    col = mix(col, vec3(1.0), 0.25 * sh);
+    if (uShowInner > 0.5) {
+      // inner shadow: white 25%, blur 77.6 -> soft inward glow from edges
+      float sh = 1.0 - clamp(0.5 + 0.5*(-sdRoundRect(p - vec2(0.0, 4.83*UNIT) - center, hsize, uRadius))/(77.57*UNIT*0.5*1.6), 0.0, 1.0);
+      col = mix(col, vec3(1.0), 0.25 * sh);
+    }
 
-    // Glass fill: white->#999 vertical, 20% opacity
-    vec3 fillCol = mix(vec3(1.0), vec3(0.6), uv.y);
-    col = mix(col, fillCol, 0.20);
+    if (uShowFill > 0.5) {
+      // Glass fill: white->#999 vertical, 20% opacity
+      vec3 fillCol = mix(vec3(1.0), vec3(0.6), uv.y);
+      col = mix(col, fillCol, 0.20);
+    }
 
     // clip to the card rounded rect
     float mask = 1.0 - smoothstep(-1.0, 1.0, d);
 
-    // centered gradient stroke (weight 2.42)
-    float sw = 2.42 * UNIT;
-    float band = abs(d) - sw * 0.5;
-    float strokeA = 1.0 - smoothstep(-0.75, 0.75, band);
-    col = mix(col, strokeGrad(uv), strokeA);
+    if (uShowStroke > 0.5) {
+      // centered gradient stroke (weight 2.42)
+      float sw = 2.42 * UNIT;
+      float band = abs(d) - sw * 0.5;
+      float strokeA = 1.0 - smoothstep(-0.75, 0.75, band);
+      col = mix(col, strokeGrad(uv), strokeA);
+    }
 
     gl_FragColor = vec4(col * mask, mask);
   }
