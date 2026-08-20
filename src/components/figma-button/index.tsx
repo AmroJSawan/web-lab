@@ -42,7 +42,7 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   prGain: 30, // calibrated against reference/layers/fx-wave-only@2x.png
   waveProcedural: true, // procedural Pattern Refraction chain by default (baked texture behind the toggle)
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
-  glassScale: 6, // K_REFRACT: near-clean edge — the Figma reference shows no visible rim ring
+  glassScale: 30, // K_REFRACT (original ybouane-baseline calibration, full rim refraction)
   glassDisp: 0, // dispersion off by default (slider re-enables the rainbow fringe)
   glassFrost: 1.0, // Figma frost radius as-is
   specGain: 0.45,
