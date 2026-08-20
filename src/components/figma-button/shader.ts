@@ -40,6 +40,8 @@ export const fragmentShader = /* glsl */ `
   uniform float uGlassScale; // K_REFRACT: px scale for the refraction offset
   uniform float uGlassDisp;  // K_DISP: px scale for chromatic dispersion width
   uniform float uSpecGain;   // specular rim gain multiplier
+  uniform sampler2D uWaveTex; // baked FX wave layer (frame-aligned 2x, straight alpha)
+  uniform float uWaveProcedural; // 1 = procedural chain, 0 = baked ground truth
 
   // --- per-layer QA toggles (1 = visible) ---
   uniform float uShowA;          // "FX shader 02" wave layer
@@ -146,6 +148,13 @@ export const fragmentShader = /* glsl */ `
   vec4 layerA(vec2 p) {
     if (uShowA < 0.5) return vec4(0.0);
     if (uShowWave < 0.5) return rasterA(p);
+    if (uWaveProcedural < 0.5) {
+      // Ground truth: the FX layer exactly as Figma renders it (matte grain
+      // preserved through mipmapped minification — no plastic sheen).
+      vec2 tuv = vec2(p.x / uSize.x, 1.0 - p.y / uSize.y);
+      if (tuv.x < 0.0 || tuv.x > 1.0 || tuv.y < 0.0 || tuv.y > 1.0) return vec4(0.0);
+      return texture2D(uWaveTex, tuv);
+    }
     vec2 uv = (p - A_POS) / A_SIZE;
     vec2 uvR = patternSampleUV(uv, uPRStrength, uPRStrength * (1.0 + uPRDispersion));
     vec2 uvG = patternSampleUV(uv, uPRStrength, uPRStrength);
