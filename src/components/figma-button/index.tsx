@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   prStripWidth: 0.3, // Transform R 12% -> ~0.3 in port UV space (calibrated vs fx-wave-only isolate)
   prAngle: 472, // Transform A 472deg
   prGain: 30, // calibrated against reference/layers/fx-wave-only@2x.png
-  waveProcedural: false, // baked Figma render by default: matte, no plastic sheen
+  waveProcedural: true, // procedural Pattern Refraction chain by default (baked texture behind the toggle)
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
   glassScale: 6, // K_REFRACT: near-clean edge — the Figma reference shows no visible rim ring
   glassDisp: 0, // dispersion off by default (slider re-enables the rainbow fringe)
