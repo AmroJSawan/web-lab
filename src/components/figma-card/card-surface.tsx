@@ -87,7 +87,7 @@ export function CardSurface({
   onReady,
 }: CardSurfaceProps) {
   const wrap = useRef<HTMLDivElement>(null)
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  const [size, setSize] = useState<{ w: number; h: number; r: number } | null>(null)
   const [painted, setPainted] = useState(!fadeIn)
 
   useLayoutEffect(() => {
@@ -95,7 +95,9 @@ export function CardSurface({
     const el = wrap.current
     const measure = () => {
       const parent = el.parentElement
-      if (parent) setSize({ w: parent.clientWidth, h: parent.clientHeight })
+      if (!parent) return
+      const radiusPx = parseFloat(getComputedStyle(parent).borderTopLeftRadius) || 12
+      setSize({ w: parent.clientWidth, h: parent.clientHeight, r: radiusPx })
     }
     measure()
     const observer = new ResizeObserver(measure)
@@ -103,7 +105,9 @@ export function CardSurface({
     return () => observer.disconnect()
   }, [])
 
-  const scaledRadius = size ? radius * (size.w / 853.01) : radius
+  // Convert the card's real rendered radius into design-space px so the shader
+  // clips/strokes exactly along the DOM rounded corner (zero form-factor impact).
+  const designRadius = size ? size.r * (853.01 / size.w) : radius
 
   return (
     <div
@@ -122,7 +126,7 @@ export function CardSurface({
           <CardQuad
             width={size.w}
             height={size.h}
-            radius={scaledRadius}
+            radius={designRadius}
             settings={settings}
             onReady={() => {
               setPainted(true)

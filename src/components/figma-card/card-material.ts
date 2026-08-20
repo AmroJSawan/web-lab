@@ -33,7 +33,7 @@ export const cardFragmentShader = /* glsl */ `
   varying vec2 vUv;
 
   uniform vec2  uSize;       // rendered px (aspect matches 853.01 x 524.37)
-  uniform float uRadius;     // rendered corner radius px (unused: design-space)
+  uniform float uRadius;     // card corner radius in DESIGN px (measured from the DOM)
 
   // calibration (same conventions as the button experiment)
   uniform float uFxGain;     // displacement gain (button-calibrated ~30)
@@ -190,7 +190,7 @@ export const cardFragmentShader = /* glsl */ `
   }
 
   // ---------- Glass (researched model; params from node 1:1357) ----------
-  #define G_RADIUS 29.0
+  #define G_RADIUS uRadius
   #define G_DEPTH 120.82
   float glassHeight(float inside){
     float x = clamp(inside / G_DEPTH, 0.0, 1.0);
