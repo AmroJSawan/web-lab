@@ -44,14 +44,14 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
   glassScale: 6, // K_REFRACT: near-clean edge — the Figma reference shows no visible rim ring
   glassDisp: 0, // dispersion off by default (slider re-enables the rainbow fringe)
-  glassFrost: 1.9, // grain-free: mip-bias smoothing of the baked stipple, ridges intact
-  specGain: 0, // glossy plastic-wrap sheen off — reference reads matte-silk
+  glassFrost: 1.0, // Figma frost radius as-is
+  specGain: 0.45,
   showA: true,
   showWave: true,
   showB: true,
   showGlass: true,
-  showGlassFill: false, // white overlay wash off: contributes the plastic-wrap sheen
-  showInnerShadow: false, // white edge glow off: same reason
+  showGlassFill: true,
+  showInnerShadow: true,
   showStroke: true,
   showText: true,
 }
