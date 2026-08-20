@@ -19,6 +19,7 @@ export interface ButtonSettings {
   blurSigma: number
   glassScale: number
   glassDisp: number
+  glassFrost: number
   specGain: number
   showA: boolean
   showWave: boolean
@@ -43,6 +44,7 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
   glassScale: 6, // K_REFRACT: near-clean edge — the Figma reference shows no visible rim ring
   glassDisp: 0, // dispersion off by default (slider re-enables the rainbow fringe)
+  glassFrost: 1.9, // grain-free: mip-bias smoothing of the baked stipple, ridges intact
   specGain: 0, // glossy plastic-wrap sheen off — reference reads matte-silk
   showA: true,
   showWave: true,
@@ -67,6 +69,7 @@ function settingsToUniforms(s: ButtonSettings): Record<string, number> {
     uBlurSigma: s.blurSigma,
     uGlassScale: s.glassScale,
     uGlassDisp: s.glassDisp,
+    uGlassFrost: s.glassFrost,
     uSpecGain: s.specGain,
     uShowA: s.showA ? 1 : 0,
     uShowWave: s.showWave ? 1 : 0,

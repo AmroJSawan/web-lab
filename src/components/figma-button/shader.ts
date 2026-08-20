@@ -40,6 +40,7 @@ export const fragmentShader = /* glsl */ `
   uniform float uGlassScale; // K_REFRACT: px scale for the refraction offset
   uniform float uGlassDisp;  // K_DISP: px scale for chromatic dispersion width
   uniform float uSpecGain;   // specular rim gain multiplier
+  uniform float uGlassFrost; // frost blur scale (1 = Figma radius 17)
   uniform sampler2D uWaveTex; // baked FX wave layer (frame-aligned 2x, straight alpha)
   uniform float uWaveProcedural; // 1 = procedural chain, 0 = baked ground truth
 
@@ -153,7 +154,9 @@ export const fragmentShader = /* glsl */ `
       // preserved through mipmapped minification — no plastic sheen).
       vec2 tuv = vec2(p.x / uSize.x, 1.0 - p.y / uSize.y);
       if (tuv.x < 0.0 || tuv.x > 1.0 || tuv.y < 0.0 || tuv.y > 1.0) return vec4(0.0);
-      return texture2D(uWaveTex, tuv);
+      // Mip LOD bias: let the full mip chain average the frost stipple into
+      // smooth tone (sparse-tap blur can't denoise dense grain).
+      return texture2D(uWaveTex, tuv, uGlassFrost);
     }
     vec2 uv = (p - A_POS) / A_SIZE;
     vec2 uvR = patternSampleUV(uv, uPRStrength, uPRStrength * (1.0 + uPRDispersion));
@@ -276,24 +279,45 @@ export const fragmentShader = /* glsl */ `
     float caS = DISP * uGlassDisp * UNIT * (edge * 0.85 + 0.15);
     vec2 caD = N.xy * caS;
 
-    // === Frost radius 17 -> gaussian sigma ~ 17*0.568. Premultiplied taps.
-    float frostSigma = 17.0 * 0.568 * UNIT;
+    // === Frost radius 17 -> gaussian sigma ~ 17*0.568, scaled by uGlassFrost.
+    // Deterministic center + two-ring gaussian: smooth grain-free blur
+    // (the old hash-jittered taps re-grained the surface -> "pixely").
+    float frostSigma = 17.0 * 0.568 * UNIT * uGlassFrost;
     vec3 acc = vec3(0.0);
     float accA = 0.0;
-    const int FT = 6;
-    for (int i = 0; i < FT; i++) {
-      float a = 6.28318 * (float(i) + 0.5) / float(FT);
-      vec2 j = vec2(cos(a), sin(a)) * frostSigma * (0.35 + 0.65 * hash(p + float(i) * 3.1));
-      vec4 sR = backdrop(p + refrOff + caD + j);
-      vec4 sG = backdrop(p + refrOff + j);
-      vec4 sB = backdrop(p + refrOff - caD + j);
-      acc.r += sR.r * sR.a;
-      acc.g += sG.g * sG.a;
-      acc.b += sB.b * sB.a;
-      accA += sG.a;
+    float accW = 0.0;
+    {
+      vec4 s0R = backdrop(p + refrOff + caD);
+      vec4 s0G = backdrop(p + refrOff);
+      vec4 s0B = backdrop(p + refrOff - caD);
+      acc += vec3(s0R.r * s0R.a, s0G.g * s0G.a, s0B.b * s0B.a);
+      accA += s0G.a;
+      accW += 1.0;
     }
-    float alpha = accA / float(FT);
-    vec3 refracted = alpha > 0.001 ? acc / float(FT) / alpha : vec3(0.0);
+    for (int i = 0; i < 6; i++) {
+      float a = 6.28318 * float(i) / 6.0;
+      vec2 dirv = vec2(cos(a), sin(a));
+      {
+        vec2 j = dirv * frostSigma * 0.65;
+        vec4 sR = backdrop(p + refrOff + caD + j);
+        vec4 sG = backdrop(p + refrOff + j);
+        vec4 sB = backdrop(p + refrOff - caD + j);
+        acc += vec3(sR.r * sR.a, sG.g * sG.a, sB.b * sB.a) * 0.8;
+        accA += sG.a * 0.8;
+        accW += 0.8;
+      }
+      {
+        vec2 j = rot2d(6.28318 / 12.0) * dirv * frostSigma * 1.35;
+        vec4 sR = backdrop(p + refrOff + caD + j);
+        vec4 sG = backdrop(p + refrOff + j);
+        vec4 sB = backdrop(p + refrOff - caD + j);
+        acc += vec3(sR.r * sR.a, sG.g * sG.a, sB.b * sB.a) * 0.45;
+        accA += sG.a * 0.45;
+        accW += 0.45;
+      }
+    }
+    float alpha = accA / accW;
+    vec3 refracted = alpha > 0.001 ? acc / accW / alpha : vec3(0.0);
 
     vec4 c = vec4(refracted, alpha);
 

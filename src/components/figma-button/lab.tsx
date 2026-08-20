@@ -31,6 +31,7 @@ const SLIDERS: Array<{
   { key: 'blurSigma', label: 'Solid blur sigma (px)', min: 0, max: 120, step: 0.5 },
   { key: 'glassScale', label: 'Glass refraction K (px)', min: 0, max: 120, step: 1 },
   { key: 'glassDisp', label: 'Glass dispersion K (px)', min: 0, max: 120, step: 1 },
+  { key: 'glassFrost', label: 'Glass frost smoothness', min: 0, max: 6, step: 0.1 },
   { key: 'specGain', label: 'Specular gain', min: 0, max: 2, step: 0.01 },
 ]
 
