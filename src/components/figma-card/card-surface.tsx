@@ -25,9 +25,10 @@ function CardQuad({ width, height, radius, settings, onReady }: QuadProps) {
   // Baked ground-truth FX layer (card-aligned 2x export from Figma)
   const fxTexture = useMemo(() => {
     const tex = new THREE.TextureLoader().load(fx4TextureUrl, () => invalidate())
-    tex.minFilter = THREE.LinearFilter
+    tex.minFilter = THREE.LinearMipmapLinearFilter
     tex.magFilter = THREE.LinearFilter
-    tex.generateMipmaps = false
+    tex.generateMipmaps = true
+    tex.anisotropy = 4
     return tex
   }, [invalidate])
 

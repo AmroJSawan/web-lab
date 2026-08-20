@@ -9,6 +9,7 @@ export interface CardSettings {
   // glass calibration
   glassScale: number // K_REFRACT px
   glassDisp: number // K_DISP px
+  glassFrost: number // frost blur scale (1 = Figma radius)
   specGain: number
   fxProcedural: boolean // true = experimental procedural chain, false = baked ground truth
   // layer toggles (real Figma layers)
@@ -33,6 +34,7 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
   fxDisp: 3,
   glassScale: 30,
   glassDisp: 0, // dispersion visual default off, like the button experiment
+  glassFrost: 1.4, // softened default: natural + smooth at web scale
   specGain: 0.5,
   fxProcedural: false,
   showSolid: true,
@@ -54,6 +56,7 @@ export function cardSettingsToUniforms(s: CardSettings): Record<string, number> 
     uFxDisp: s.fxDisp,
     uGlassScale: s.glassScale,
     uGlassDisp: s.glassDisp,
+    uGlassFrost: s.glassFrost,
     uSpecGain: s.specGain,
     uFxProcedural: s.fxProcedural ? 1 : 0,
     uShowSolid: s.showSolid ? 1 : 0,

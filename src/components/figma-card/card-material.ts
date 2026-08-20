@@ -45,6 +45,7 @@ export const cardFragmentShader = /* glsl */ `
   uniform float uSpecGain;   // glass specular gain
   uniform sampler2D uFxTex;  // baked FX-shader-4 layer (card-aligned, straight alpha)
   uniform float uFxProcedural; // 1 = experimental procedural chain, 0 = baked texture
+  uniform float uGlassFrost;   // frost blur scale (1 = Figma radius 15.71)
 
   // per-layer toggles
   uniform float uShowSolid;
@@ -225,20 +226,44 @@ export const cardFragmentShader = /* glsl */ `
       float caS = 0.5 * uGlassDisp * (edge*0.85 + 0.15);  // dispersion .5
       vec2 caD = N.xy * caS;
 
-      float frostSigma = 15.71 * 0.568;
-      vec3 acc = vec3(0.0); float accA = 0.0;
-      const int FT = 6;
-      for (int i = 0; i < FT; i++) {
-        float a2 = TAU * (float(i)+0.5) / float(FT);
-        vec2 j = vec2(cos(a2), sin(a2)) * frostSigma * (0.35 + 0.65*hash(pd + float(i)*3.1));
-        vec4 sR = backdrop(pd + refr + caD + j);
-        vec4 sG = backdrop(pd + refr + j);
-        vec4 sB = backdrop(pd + refr - caD + j);
-        acc += vec3(sR.r*sR.a, sG.g*sG.a, sB.b*sB.a);
-        accA += sG.a;
+      // Deterministic gaussian frost: center + two rings (6 inner, 6 outer).
+      // Smooth, grain-free blur — matches Figma's soft frosted look.
+      float frostSigma = 15.71 * 0.568 * uGlassFrost;
+      vec3 acc = vec3(0.0); float accA = 0.0; float accW = 0.0;
+      {
+        vec4 s0R = backdrop(pd + refr + caD);
+        vec4 s0G = backdrop(pd + refr);
+        vec4 s0B = backdrop(pd + refr - caD);
+        float w0 = 1.0;
+        acc += vec3(s0R.r*s0R.a, s0G.g*s0G.a, s0B.b*s0B.a) * w0;
+        accA += s0G.a * w0; accW += w0;
       }
-      float alpha = accA / float(FT);
-      vec3 refracted = alpha > 0.001 ? acc / float(FT) / alpha : vec3(0.0);
+      for (int i = 0; i < 6; i++) {
+        float a2 = TAU * float(i) / 6.0;
+        vec2 dirv = vec2(cos(a2), sin(a2));
+        // inner ring at 0.65 sigma
+        {
+          vec2 j = dirv * frostSigma * 0.65;
+          vec4 sR = backdrop(pd + refr + caD + j);
+          vec4 sG = backdrop(pd + refr + j);
+          vec4 sB = backdrop(pd + refr - caD + j);
+          float w = 0.8;
+          acc += vec3(sR.r*sR.a, sG.g*sG.a, sB.b*sB.a) * w;
+          accA += sG.a * w; accW += w;
+        }
+        // outer ring at 1.35 sigma, rotated half-step
+        {
+          vec2 j = rot2d(TAU/12.0) * dirv * frostSigma * 1.35;
+          vec4 sR = backdrop(pd + refr + caD + j);
+          vec4 sG = backdrop(pd + refr + j);
+          vec4 sB = backdrop(pd + refr - caD + j);
+          float w = 0.45;
+          acc += vec3(sR.r*sR.a, sG.g*sG.a, sB.b*sB.a) * w;
+          accA += sG.a * w; accW += w;
+        }
+      }
+      float alpha = accA / accW;
+      vec3 refracted = alpha > 0.001 ? acc / accW / alpha : vec3(0.0);
       c = vec4(refracted, alpha);
 
       // specular: light 293deg, intensity 1.0, splay .4 + fresnel
