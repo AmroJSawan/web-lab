@@ -1,86 +1,51 @@
-import { lazy, Suspense } from 'react'
-import { motion } from 'motion/react'
-import { Button } from '@/components/ui/button'
+import { useSyncExternalStore } from 'react'
+import { ButtonExperiment } from '@/pages/button-experiment'
+import { CardExperiment } from '@/pages/card-experiment'
+import { cn } from '@/lib/utils'
 
-const MaterialButton = lazy(() =>
-  import('@/components/figma-button/material-button').then((m) => ({ default: m.MaterialButton })),
-)
-const FigmaButtonLab = lazy(() =>
-  import('@/components/figma-button/lab').then((m) => ({ default: m.FigmaButtonLab })),
-)
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+// Minimal hash router — no dependency, works on GitHub Pages sub-path.
+function subscribe(cb: () => void) {
+  window.addEventListener('hashchange', cb)
+  return () => window.removeEventListener('hashchange', cb)
+}
+function useHash() {
+  return useSyncExternalStore(
+    subscribe,
+    () => window.location.hash || '#/button',
+  )
+}
 
-const stack = [
-  { name: 'Vite 8', role: 'Build' },
-  { name: 'React 19', role: 'UI runtime' },
-  { name: 'TypeScript', role: 'Types' },
-  { name: 'Tailwind v4', role: 'Styling' },
-  { name: 'shadcn/ui', role: 'Components' },
-  { name: 'Three.js + R3F', role: 'Shaders' },
-  { name: 'Motion', role: 'Animation' },
+const NAV = [
+  { hash: '#/button', label: 'Button' },
+  { hash: '#/card', label: 'Card' },
 ]
 
 export default function App() {
+  const hash = useHash()
+  const route = hash.startsWith('#/card') ? 'card' : 'button'
+
   return (
     <div className="min-h-svh text-foreground">
-      <section className="flex flex-col items-center gap-4 px-6 pt-16">
-        <p className="text-sm text-muted-foreground">
-          Experiment 01: Figma shader parity — wave refraction + glass
-        </p>
-        <Suspense
-          fallback={
-            <div className="h-[255px] w-full max-w-[782px] rounded-[98px] border bg-background shadow-xs" />
-          }
-        >
-          <FigmaButtonLab />
-        </Suspense>
-      </section>
+      <nav className="sticky top-0 z-50 flex items-center gap-1 border-b bg-background/70 px-6 py-3 backdrop-blur">
+        <span className="mr-3 text-sm font-semibold">web-lab</span>
+        {NAV.map((item) => {
+          const active = `#/${route}` === item.hash
+          return (
+            <a
+              key={item.hash}
+              href={item.hash}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-sm transition-colors',
+                active ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/60',
+              )}
+            >
+              {item.label}
+            </a>
+          )
+        })}
+      </nav>
 
-      <main className="mx-auto flex max-w-3xl flex-col items-center justify-center gap-8 px-6 py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full"
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl tracking-tight">web-lab</CardTitle>
-              <CardDescription>
-                A minimal, fast base for modern interfaces, with a full component
-                system underneath. Follows your system's light or dark scheme.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-6">
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {stack.map((item) => (
-                  <li key={item.name} className="rounded-lg border bg-muted/40 px-3 py-2">
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.role}</p>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-center gap-3">
-                <Button asChild>
-                  <a href="https://github.com/AmroJSawan/web-lab">Repository</a>
-                </Button>
-                <Suspense fallback={<Button variant="outline">shadcn/ui docs</Button>}>
-                  <MaterialButton>shadcn/ui docs</MaterialButton>
-                </Suspense>
-                <Button asChild variant="outline">
-                  <a href="https://ui.shadcn.com">shadcn/ui docs</a>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </main>
+      {route === 'card' ? <CardExperiment /> : <ButtonExperiment />}
     </div>
   )
 }
