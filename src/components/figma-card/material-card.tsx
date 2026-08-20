@@ -15,6 +15,9 @@ import { useCardSettings } from './card-settings'
 const CardSurface = lazy(() =>
   import('./card-surface').then((m) => ({ default: m.CardSurface })),
 )
+const LiquidGlass = lazy(() =>
+  import('./liquid-glass').then((m) => ({ default: m.LiquidGlass })),
+)
 const ButtonGlassSurface = lazy(() =>
   import('./button-glass-surface').then((m) => ({ default: m.ButtonGlassSurface })),
 )
@@ -48,6 +51,13 @@ export function MaterialCard() {
       {cardSurface && (
         <Suspense fallback={null}>
           <CardSurface settings={settings} />
+        </Suspense>
+      )}
+
+      {/* CSS/SVG liquid glass over the material (user's reference technique) */}
+      {cardSurface && settings.showLiquidGlass && (
+        <Suspense fallback={null}>
+          <LiquidGlass />
         </Suspense>
       )}
 
