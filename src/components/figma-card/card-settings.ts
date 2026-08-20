@@ -21,6 +21,7 @@ export interface CardSettings {
   showInner: boolean
   showStroke: boolean
   // DOM surface toggles
+  showCardSurface: boolean
   showBadgeSurface: boolean
   showButtonSurface: boolean
 }
@@ -44,6 +45,7 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
   showGlassFill: true,
   showInner: true,
   showStroke: true,
+  showCardSurface: true,
   showBadgeSurface: true,
   showButtonSurface: true,
 }

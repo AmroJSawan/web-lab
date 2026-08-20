@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import { MaterialCard } from './material-card'
 import {
   DEFAULT_CARD_SETTINGS,
@@ -7,6 +8,7 @@ import {
 } from './card-settings'
 
 const SURFACE_TOGGLES: Array<{ key: keyof CardSettings; label: string }> = [
+  { key: 'showCardSurface', label: 'Card material surface' },
   { key: 'showSolid', label: 'Solid (blurred strip)' },
   { key: 'showFx', label: 'FX shader 4 (sand layer)' },
   { key: 'showFxFx', label: 'Pattern Refraction chain' },
@@ -42,8 +44,26 @@ export function CardLab() {
   const set = (key: keyof CardSettings, value: boolean | number) =>
     setCardSettings({ ...settings, [key]: value })
 
+  const allMaterial =
+    settings.showCardSurface && settings.showBadgeSurface && settings.showButtonSurface
+  const swap = () =>
+    setCardSettings({
+      ...settings,
+      showCardSurface: !allMaterial,
+      showBadgeSurface: !allMaterial,
+      showButtonSurface: !allMaterial,
+    })
+
   return (
     <div className="flex w-full flex-col items-center gap-6">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted-foreground">
+          Surfaces: <span className="font-medium text-foreground">{allMaterial ? 'Figma material' : 'shadcn default'}</span>
+        </span>
+        <Button variant="outline" size="sm" onClick={swap}>
+          Swap surfaces
+        </Button>
+      </div>
       <MaterialCard />
 
       <div className="grid w-full max-w-3xl gap-6 rounded-xl border bg-card p-5 sm:grid-cols-2">
