@@ -38,7 +38,7 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   prAngle: 472, // Transform A 472deg
   prGain: 30, // calibrated against reference/layers/fx-wave-only@2x.png
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
-  glassScale: 30, // K_REFRACT (ybouane baseline)
+  glassScale: 6, // K_REFRACT: near-clean edge — the Figma reference shows no visible rim ring
   glassDisp: 0, // dispersion off by default (slider re-enables the rainbow fringe)
   specGain: 0.45,
   showA: true,
