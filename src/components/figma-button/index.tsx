@@ -39,7 +39,7 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   prGain: 30, // calibrated against reference/layers/fx-wave-only@2x.png
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
   glassScale: 30, // K_REFRACT (ybouane baseline)
-  glassDisp: 22, // K_DISP (ybouane baseline ~36; softened for rim concentration)
+  glassDisp: 0, // dispersion off by default (slider re-enables the rainbow fringe)
   specGain: 0.45,
   showA: true,
   showWave: true,
