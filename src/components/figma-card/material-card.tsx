@@ -15,6 +15,9 @@ import { useCardSettings } from './card-settings'
 const CardSurface = lazy(() =>
   import('./card-surface').then((m) => ({ default: m.CardSurface })),
 )
+const ButtonGlassSurface = lazy(() =>
+  import('./button-glass-surface').then((m) => ({ default: m.ButtonGlassSurface })),
+)
 
 /**
  * The Materials-Raw card content on the DEFAULT shadcn Card — canonical
@@ -83,12 +86,16 @@ export function MaterialCard() {
             gradient background + inset rim via shadows, no added borders */}
         <Button
           className={cn(
-            'transition-all duration-500',
-            buttonSurface &&
-              'text-white bg-[radial-gradient(120%_140%_at_30%_-20%,#3a3a3a_0%,#111_45%,#000_100%)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15),inset_0_1px_0_0_rgba(255,255,255,0.2),0_8px_20px_-8px_rgba(0,0,0,0.55)] hover:brightness-125',
+            'relative overflow-hidden transition-all duration-500',
+            buttonSurface && 'bg-transparent text-white hover:bg-transparent hover:brightness-125',
           )}
         >
-          See more
+          {buttonSurface && (
+            <Suspense fallback={null}>
+              <ButtonGlassSurface settings={settings} />
+            </Suspense>
+          )}
+          <span className="relative z-10">See more</span>
         </Button>
       </CardFooter>
     </Card>
