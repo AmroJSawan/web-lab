@@ -10,6 +10,7 @@ const SURFACE_TOGGLES: Array<{ key: keyof CardSettings; label: string }> = [
   { key: 'showSolid', label: 'Solid (blurred strip)' },
   { key: 'showFx', label: 'FX shader 4 (sand layer)' },
   { key: 'showFxFx', label: 'Pattern Refraction chain' },
+  { key: 'fxProcedural', label: 'Procedural FX (vs baked ground truth)' },
   { key: 'showGlass', label: 'Glass refraction + specular' },
   { key: 'showGlassFill', label: 'Glass fill (20%)' },
   { key: 'showInner', label: 'Inner shadow glow' },

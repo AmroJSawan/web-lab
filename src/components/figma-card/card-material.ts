@@ -43,6 +43,8 @@ export const cardFragmentShader = /* glsl */ `
   uniform float uGlassScale; // glass K_REFRACT px
   uniform float uGlassDisp;  // glass K_DISP px
   uniform float uSpecGain;   // glass specular gain
+  uniform sampler2D uFxTex;  // baked FX-shader-4 layer (card-aligned, straight alpha)
+  uniform float uFxProcedural; // 1 = experimental procedural chain, 0 = baked texture
 
   // per-layer toggles
   uniform float uShowSolid;
@@ -146,6 +148,12 @@ export const cardFragmentShader = /* glsl */ `
 
   vec4 layerFx4(vec2 pd) {
     if (uShowFx < 0.5) return vec4(0.0);
+    if (uFxProcedural < 0.5) {
+      // Ground-truth path: the layer exactly as Figma renders it, baked at 2x.
+      vec2 tuv = vec2(pd.x / DESIGN.x, 1.0 - pd.y / DESIGN.y);
+      if (tuv.x < 0.0 || tuv.x > 1.0 || tuv.y < 0.0 || tuv.y > 1.0) return vec4(0.0);
+      return texture2D(uFxTex, tuv);
+    }
     float lu = -0.00947*(pd.x - 895.36) + 0.99996*(pd.y + 39.13);
     float lv = -0.99996*(pd.x - 895.36) - 0.00947*(pd.y + 39.13);
     vec2 luv = vec2(lu / 698.03, lv / 491.03);

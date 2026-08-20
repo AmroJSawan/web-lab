@@ -1,7 +1,8 @@
 import { Canvas, useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { cardFragmentShader, cardVertexShader } from './card-material'
+import fx4TextureUrl from './fx4-texture.png'
 import {
   cardSettingsToUniforms,
   DEFAULT_CARD_SETTINGS,
@@ -20,6 +21,15 @@ function CardQuad({ width, height, radius, settings, onReady }: QuadProps) {
   const material = useRef<THREE.ShaderMaterial>(null)
   const invalidate = useThree((s) => s.invalidate)
   const fired = useRef(false)
+
+  // Baked ground-truth FX layer (card-aligned 2x export from Figma)
+  const fxTexture = useMemo(() => {
+    const tex = new THREE.TextureLoader().load(fx4TextureUrl, () => invalidate())
+    tex.minFilter = THREE.LinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.generateMipmaps = false
+    return tex
+  }, [invalidate])
 
   useEffect(() => {
     if (!material.current) return
@@ -48,6 +58,7 @@ function CardQuad({ width, height, radius, settings, onReady }: QuadProps) {
         uniforms={{
           uSize: { value: new THREE.Vector2(width, height) },
           uRadius: { value: radius },
+          uFxTex: { value: fxTexture },
           ...Object.fromEntries(
             Object.entries(cardSettingsToUniforms(DEFAULT_CARD_SETTINGS)).map(([k, v]) => [
               k,

@@ -10,6 +10,7 @@ export interface CardSettings {
   glassScale: number // K_REFRACT px
   glassDisp: number // K_DISP px
   specGain: number
+  fxProcedural: boolean // true = experimental procedural chain, false = baked ground truth
   // layer toggles (real Figma layers)
   showSolid: boolean
   showFx: boolean
@@ -33,6 +34,7 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
   glassScale: 30,
   glassDisp: 0, // dispersion visual default off, like the button experiment
   specGain: 0.5,
+  fxProcedural: false,
   showSolid: true,
   showFx: true,
   showFxFx: true,
@@ -53,6 +55,7 @@ export function cardSettingsToUniforms(s: CardSettings): Record<string, number> 
     uGlassScale: s.glassScale,
     uGlassDisp: s.glassDisp,
     uSpecGain: s.specGain,
+    uFxProcedural: s.fxProcedural ? 1 : 0,
     uShowSolid: s.showSolid ? 1 : 0,
     uShowFx: s.showFx ? 1 : 0,
     uShowFxFx: s.showFxFx ? 1 : 0,
