@@ -1,43 +1,44 @@
 import { useSyncExternalStore } from 'react'
 
 export interface CardSettings {
-  // warm material
-  warm: number
-  peach: number
-  green: number
-  bandFreq: number
-  bandStr: number
-  warp: number
-  // glass rim
+  // Pattern Refraction chain calibration (button-experiment conventions)
+  fxGain: number // displacement gain
+  fxStrip: number // Figma R% -> port stripWidth factor
+  fxFrost: number // frost jitter scale
+  fxDisp: number // dispersion scale
+  // glass calibration
+  glassScale: number // K_REFRACT px
+  glassDisp: number // K_DISP px
   specGain: number
-  rimRefract: number
-  // surface toggles
-  showWarm: boolean
-  showRim: boolean
-  showSpec: boolean
+  // layer toggles (real Figma layers)
+  showSolid: boolean
+  showFx: boolean
+  showFxFx: boolean // the refraction chain (off = plain peach fill)
+  showGlass: boolean
+  showGlassFill: boolean
   showInner: boolean
-  showFill: boolean
   showStroke: boolean
   // DOM surface toggles
   showBadgeSurface: boolean
   showButtonSurface: boolean
 }
 
-// Defaults tuned against reference/card/figma-card@2x.png.
+// Figma node values live in the shader; these are the calibration knobs,
+// defaults carried over from the button-experiment calibration.
 export const DEFAULT_CARD_SETTINGS: CardSettings = {
-  warm: 1,
-  peach: 0.9,
-  green: 0.65,
-  bandFreq: 13,
-  bandStr: 0.7,
-  warp: 1,
+  fxGain: 28,
+  fxStrip: 1.0,
+  fxFrost: 0.5,
+  fxDisp: 3,
+  glassScale: 30,
+  glassDisp: 0, // dispersion visual default off, like the button experiment
   specGain: 0.5,
-  rimRefract: 26,
-  showWarm: true,
-  showRim: true,
-  showSpec: true,
+  showSolid: true,
+  showFx: true,
+  showFxFx: true,
+  showGlass: true,
+  showGlassFill: true,
   showInner: true,
-  showFill: true,
   showStroke: true,
   showBadgeSurface: true,
   showButtonSurface: true,
@@ -45,19 +46,19 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
 
 export function cardSettingsToUniforms(s: CardSettings): Record<string, number> {
   return {
-    uWarm: s.warm,
-    uPeach: s.peach,
-    uGreen: s.green,
-    uBandFreq: s.bandFreq,
-    uBandStr: s.bandStr,
-    uWarp: s.warp,
+    uFxGain: s.fxGain,
+    uFxStrip: s.fxStrip,
+    uFxFrost: s.fxFrost,
+    uFxDisp: s.fxDisp,
+    uGlassScale: s.glassScale,
+    uGlassDisp: s.glassDisp,
     uSpecGain: s.specGain,
-    uRimRefract: s.rimRefract,
-    uShowWarm: s.showWarm ? 1 : 0,
-    uShowRim: s.showRim ? 1 : 0,
-    uShowSpec: s.showSpec ? 1 : 0,
+    uShowSolid: s.showSolid ? 1 : 0,
+    uShowFx: s.showFx ? 1 : 0,
+    uShowFxFx: s.showFxFx ? 1 : 0,
+    uShowGlass: s.showGlass ? 1 : 0,
+    uShowGlassFill: s.showGlassFill ? 1 : 0,
     uShowInner: s.showInner ? 1 : 0,
-    uShowFill: s.showFill ? 1 : 0,
     uShowStroke: s.showStroke ? 1 : 0,
   }
 }

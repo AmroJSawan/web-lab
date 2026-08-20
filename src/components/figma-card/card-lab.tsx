@@ -7,11 +7,12 @@ import {
 } from './card-settings'
 
 const SURFACE_TOGGLES: Array<{ key: keyof CardSettings; label: string }> = [
-  { key: 'showWarm', label: 'Warm flow material' },
-  { key: 'showRim', label: 'Glass rim refraction' },
-  { key: 'showSpec', label: 'Glass specular + fresnel' },
+  { key: 'showSolid', label: 'Solid (blurred strip)' },
+  { key: 'showFx', label: 'FX shader 4 (sand layer)' },
+  { key: 'showFxFx', label: 'Pattern Refraction chain' },
+  { key: 'showGlass', label: 'Glass refraction + specular' },
+  { key: 'showGlassFill', label: 'Glass fill (20%)' },
   { key: 'showInner', label: 'Inner shadow glow' },
-  { key: 'showFill', label: 'Glass fill (20%)' },
   { key: 'showStroke', label: 'Gradient stroke' },
   { key: 'showBadgeSurface', label: 'Badge frosted glass' },
   { key: 'showButtonSurface', label: 'Button dark glass' },
@@ -24,14 +25,13 @@ const SLIDERS: Array<{
   max: number
   step: number
 }> = [
-  { key: 'warm', label: 'Warm intensity', min: 0, max: 2, step: 0.01 },
-  { key: 'peach', label: 'Peach amount', min: 0, max: 2, step: 0.01 },
-  { key: 'green', label: 'Green band amount', min: 0, max: 1.5, step: 0.01 },
-  { key: 'bandFreq', label: 'Flow band frequency', min: 2, max: 40, step: 0.5 },
-  { key: 'bandStr', label: 'Flow band strength', min: 0, max: 1, step: 0.01 },
-  { key: 'warp', label: 'Domain warp', min: 0, max: 3, step: 0.01 },
+  { key: 'fxGain', label: 'PR displacement gain', min: 1, max: 100, step: 0.5 },
+  { key: 'fxStrip', label: 'PR strip-width factor', min: 0.2, max: 8, step: 0.1 },
+  { key: 'fxFrost', label: 'PR frost scale', min: 0, max: 3, step: 0.05 },
+  { key: 'fxDisp', label: 'PR dispersion scale', min: 0, max: 5, step: 0.1 },
+  { key: 'glassScale', label: 'Glass refraction K (px)', min: 0, max: 120, step: 1 },
+  { key: 'glassDisp', label: 'Glass dispersion K (px)', min: 0, max: 120, step: 1 },
   { key: 'specGain', label: 'Specular gain', min: 0, max: 2, step: 0.01 },
-  { key: 'rimRefract', label: 'Rim refraction (px)', min: 0, max: 80, step: 0.5 },
 ]
 
 /** QA harness: the material card plus per-surface toggles and calibration controls. */
