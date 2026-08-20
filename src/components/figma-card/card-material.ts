@@ -46,6 +46,7 @@ export const cardFragmentShader = /* glsl */ `
   uniform sampler2D uFxTex;  // baked FX-shader-4 layer (card-aligned, straight alpha)
   uniform float uFxProcedural; // 1 = experimental procedural chain, 0 = baked texture
   uniform float uGlassFrost;   // frost blur scale (1 = Figma radius 15.71)
+  uniform float uFxNeutral;    // 0 = Figma peach, 1 = fully neutral (luminance only)
 
   // per-layer toggles
   uniform float uShowSolid;
@@ -147,7 +148,7 @@ export const cardFragmentShader = /* glsl */ `
     return luv;
   }
 
-  vec4 layerFx4(vec2 pd) {
+  vec4 layerFx4Raw(vec2 pd) {
     if (uShowFx < 0.5) return vec4(0.0);
     if (uFxProcedural < 0.5) {
       // Ground-truth path: the layer exactly as Figma renders it, baked at 2x.
@@ -174,6 +175,15 @@ export const cardFragmentShader = /* glsl */ `
       cB.a > 0.001 ? cB.b : 1.0
     );
     return vec4(rgb, a);
+  }
+
+  // Neutralize: same material, color reduced to its luminance. Applies to both
+  // the baked ground truth and the procedural chain.
+  vec4 layerFx4(vec2 pd) {
+    vec4 c = layerFx4Raw(pd);
+    float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+    c.rgb = mix(c.rgb, vec3(lum), uFxNeutral);
+    return c;
   }
 
   // ---------- backdrop = white, Solid, FX4 ----------

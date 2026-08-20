@@ -6,6 +6,7 @@ export interface CardSettings {
   fxStrip: number // Figma R% -> port stripWidth factor
   fxFrost: number // frost jitter scale
   fxDisp: number // dispersion scale
+  fxNeutral: number // 0 = Figma peach, 1 = fully neutral gray
   // glass calibration
   glassScale: number // K_REFRACT px
   glassDisp: number // K_DISP px
@@ -33,6 +34,7 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
   fxStrip: 1.0,
   fxFrost: 0.5,
   fxDisp: 3,
+  fxNeutral: 1, // neutral color by default; slider restores the Figma peach
   glassScale: 30,
   glassDisp: 0, // dispersion visual default off, like the button experiment
   glassFrost: 1.4, // softened default: natural + smooth at web scale
@@ -56,6 +58,7 @@ export function cardSettingsToUniforms(s: CardSettings): Record<string, number> 
     uFxStrip: s.fxStrip,
     uFxFrost: s.fxFrost,
     uFxDisp: s.fxDisp,
+    uFxNeutral: s.fxNeutral,
     uGlassScale: s.glassScale,
     uGlassDisp: s.glassDisp,
     uGlassFrost: s.glassFrost,
