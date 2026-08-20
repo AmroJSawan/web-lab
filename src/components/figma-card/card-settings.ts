@@ -43,9 +43,9 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
   showSolid: true,
   showFx: true,
   showFxFx: true,
-  showGlass: true,
-  showGlassFill: true,
-  showInner: true,
+  showGlass: false, // glass layer removed by default (refraction + specular)
+  showGlassFill: false, // its 20% fill overlay
+  showInner: false, // its inner shadow
   showStroke: true,
   showCardSurface: true,
   showBadgeSurface: true,
