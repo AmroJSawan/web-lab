@@ -5,6 +5,7 @@ import { setSharedSettings, useSharedSettings } from './settings-store'
 const LAYER_TOGGLES: Array<{ key: keyof ButtonSettings; label: string }> = [
   { key: 'showA', label: 'FX shader 02 (wave layer)' },
   { key: 'showWave', label: 'Pattern Refraction effect' },
+  { key: 'waveProcedural', label: 'Procedural FX (vs baked ground truth)' },
   { key: 'showB', label: 'Solid (blurred pill)' },
   { key: 'showGlass', label: 'Glass refraction + specular' },
   { key: 'showGlassFill', label: 'Glass fill (15% gradient)' },

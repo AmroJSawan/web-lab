@@ -1,7 +1,8 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { FRAME_H, FRAME_W, fragmentShader, vertexShader } from './shader'
+import waveTextureUrl from './wave-texture.png'
 import '@fontsource/noto-kufi-arabic/400.css'
 
 export interface ButtonSettings {
@@ -13,6 +14,7 @@ export interface ButtonSettings {
   prStripWidth: number
   prAngle: number // degrees
   prGain: number // displacement gain vs the port's normalized constant
+  waveProcedural: boolean // true = procedural chain, false = baked ground truth
   // Engine internals still calibrated
   blurSigma: number
   glassScale: number
@@ -37,16 +39,17 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   prStripWidth: 0.3, // Transform R 12% -> ~0.3 in port UV space (calibrated vs fx-wave-only isolate)
   prAngle: 472, // Transform A 472deg
   prGain: 30, // calibrated against reference/layers/fx-wave-only@2x.png
+  waveProcedural: false, // baked Figma render by default: matte, no plastic sheen
   blurSigma: 55, // Figma LAYER_BLUR 97.19 -> measured sigma ~0.568 * B
   glassScale: 6, // K_REFRACT: near-clean edge — the Figma reference shows no visible rim ring
   glassDisp: 0, // dispersion off by default (slider re-enables the rainbow fringe)
-  specGain: 0.45,
+  specGain: 0, // glossy plastic-wrap sheen off — reference reads matte-silk
   showA: true,
   showWave: true,
   showB: true,
   showGlass: true,
-  showGlassFill: true,
-  showInnerShadow: true,
+  showGlassFill: false, // white overlay wash off: contributes the plastic-wrap sheen
+  showInnerShadow: false, // white edge glow off: same reason
   showStroke: true,
   showText: true,
 }
@@ -60,6 +63,7 @@ function settingsToUniforms(s: ButtonSettings): Record<string, number> {
     uPRStripWidth: Math.max(0.001, s.prStripWidth),
     uPRAngle: s.prAngle,
     uPRGain: s.prGain,
+    uWaveProcedural: s.waveProcedural ? 1 : 0,
     uBlurSigma: s.blurSigma,
     uGlassScale: s.glassScale,
     uGlassDisp: s.glassDisp,
@@ -83,6 +87,16 @@ interface GlassQuadProps {
 function GlassQuad({ settings, width, height }: GlassQuadProps) {
   const material = useRef<THREE.ShaderMaterial>(null)
   const invalidate = useThree((state) => state.invalidate)
+
+  // Baked ground-truth wave layer (frame-aligned 2x export from Figma)
+  const waveTexture = useMemo(() => {
+    const tex = new THREE.TextureLoader().load(waveTextureUrl, () => invalidate())
+    tex.minFilter = THREE.LinearMipmapLinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.generateMipmaps = true
+    tex.anisotropy = 4
+    return tex
+  }, [invalidate])
 
   // Demand rendering: sync uniforms on every change, then request one frame.
   useEffect(() => {
@@ -109,6 +123,7 @@ function GlassQuad({ settings, width, height }: GlassQuadProps) {
           uPageBg: { value: new THREE.Color('#1e1e1e') },
           uPageBgAlpha: { value: 0 },
           uPRCenter: { value: new THREE.Vector2(0.48, 0.5) }, // Transform X 48% Y 50%
+          uWaveTex: { value: waveTexture },
           ...Object.fromEntries(
             Object.entries(settingsToUniforms(DEFAULT_SETTINGS)).map(([k, v]) => [k, { value: v }]),
           ),
